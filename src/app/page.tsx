@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, LayoutDashboard, Bolt, Shield, Play, Star, Zap, Brain, Eye, Mic } from "lucide-react";
+import { ArrowRight, LayoutDashboard, Bolt, Shield, Play, Star, Zap, Brain, Eye, Mic, MessageSquare, FileText, Video } from "lucide-react";
 
 function AnimatedSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -42,12 +42,12 @@ function Counter({ end, suffix = "", duration = 2 }: { end: number; suffix?: str
 }
 
 const features = [
-  { icon: Brain, title: "Neural Auditing", desc: "Advanced linguistic analysis that identifies emotional resonance and cognitive load in every sentence.", color: "bg-primary" },
-  { icon: Zap, title: "Velocity Maps", desc: "Visualize the pace of mentorship. Identify where dialogue stalls and where it accelerates.", color: "bg-black" },
-  { icon: Eye, title: "Visual Intelligence", desc: "Micro-expression detection and body language analysis for complete non-verbal understanding.", color: "bg-primary" },
-  { icon: Mic, title: "Voice Analytics", desc: "WPM, tone variance, and clarity scoring to optimize your delivery.", color: "bg-black" },
-  { icon: Star, title: "Scoring Framework", desc: "Proprietary 10-point scale across 5 dimensions for comprehensive feedback.", color: "bg-primary" },
-  { icon: Shield, title: "Privacy First", desc: "Enterprise-grade encryption ensures your session data stays secure.", color: "bg-black" },
+  { icon: Brain, title: "Hyper-Personalized AI", desc: "Gemini-powered reports that anchor feedback to specific transcript moments and teaching concepts.", color: "bg-primary" },
+  { icon: MessageSquare, title: "Context-Aware Chatbot", desc: "An AI coach that remembers your exact session, ready to answer questions and provide tailored drills.", color: "bg-black" },
+  { icon: Eye, title: "Visual Intelligence", desc: "MediaPipe integration analyzes face visibility, gaze direction, and gesturing in real-time.", color: "bg-primary" },
+  { icon: Mic, title: "Voice Analytics", desc: "Tracks Words Per Minute (WPM), silence ratios, and vocal clarity to optimize your delivery.", color: "bg-black" },
+  { icon: FileText, title: "Interactive Timeline", desc: "Clickable transcripts synced to your video, complete with color-coded engagement tracking.", color: "bg-primary" },
+  { icon: Video, title: "Live & Upload Modes", desc: "Record live sessions or upload existing video/audio files for deep multi-modal analysis.", color: "bg-black" },
 ];
 
 export default function Home() {
@@ -65,15 +65,17 @@ export default function Home() {
         </motion.div>
         <div className="hidden md:flex gap-12 items-center">
           <Link href="/history" className="text-primary font-bold underline decoration-2 underline-offset-4 text-sm uppercase">History</Link>
+          <Link href="/live" className="text-black font-bold hover:text-primary transition-colors text-sm uppercase">Live Coaching</Link>
         </div>
         <motion.div
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
+          className="flex items-center gap-4"
         >
           <Link href="/upload">
             <button className="bg-primary text-white px-4 md:px-6 py-2 font-bold text-xs md:text-sm uppercase tracking-tight border-b-4 border-r-4 border-black hover:bg-black transition-all hover:translate-y-1">
-              Upload
+              Get Started
             </button>
           </Link>
         </motion.div>
@@ -112,7 +114,7 @@ export default function Home() {
             >
               <div className="text-xs font-bold uppercase tracking-widest text-secondary">Status: Alpha 01</div>
               <p className="text-sm md:text-lg leading-relaxed font-medium">
-                The first editorial-grade AI coaching platform. We analyze high-stakes dialogue to reveal the invisible architecture of mentorship.
+                An elite AI instructional coach. We combine computer vision, audio signal processing, and LLMs to provide hyper-personalized teaching feedback.
               </p>
               <div className="flex gap-3 md:gap-4 pt-2 md:pt-4">
                 <motion.div whileHover={{ scale: 1.2, rotate: 5 }} transition={{ type: "spring", stiffness: 300 }}>
@@ -174,14 +176,14 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
                 className="border-l-2 border-b-2 border-black p-4 md:p-8 flex flex-col justify-between"
               >
-                <span className="text-xs font-bold uppercase">Confidence Score</span>
+                <span className="text-xs font-bold uppercase">Engagement Tracking</span>
                 <div className="text-4xl md:text-6xl font-black">
-                  <Counter end={98} suffix="%" />
+                  <Counter end={100} suffix="%" />
                 </div>
                 <div className="h-2 w-full bg-surface-container mt-4 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    whileInView={{ width: "98.2%" }}
+                    whileInView={{ width: "100%" }}
                     transition={{ duration: 1.5, delay: 0.3 }}
                     className="h-full bg-primary"
                   />
@@ -193,9 +195,9 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="border-l-2 border-b-2 border-black p-4 md:p-8 flex flex-col justify-between bg-black text-white"
               >
-                <span className="text-xs font-bold uppercase">Real-time Latency</span>
-                <div className="text-4xl md:text-6xl font-black">
-                  <Counter end={12} suffix="MS" />
+                <span className="text-xs font-bold uppercase">Context-Aware AI</span>
+                <div className="text-4xl md:text-6xl font-black text-primary">
+                  <Counter end={24} suffix="/7" />
                 </div>
               </motion.div>
             </div>
@@ -209,15 +211,26 @@ export default function Home() {
                 <h2 className="text-3xl md:text-5xl font-black uppercase leading-none tracking-tighter font-headline">
                   Designed for<br />High-Stakes<br />Environments.
                 </h2>
-                <Link href="/upload" className="flex items-center gap-4 group">
-                  <span className="text-lg md:text-xl font-bold uppercase border-b-4 border-black group-hover:text-primary transition-colors">Upload Session</span>
-                  <motion.span
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowRight className="w-6 h-8 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
-                  </motion.span>
-                </Link>
+                <div className="flex flex-col gap-4 pt-4">
+                  <Link href="/upload" className="flex items-center gap-4 group">
+                    <span className="text-lg md:text-xl font-bold uppercase border-b-4 border-black group-hover:text-primary transition-colors">Upload Session</span>
+                    <motion.span
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <ArrowRight className="w-6 h-8 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
+                    </motion.span>
+                  </Link>
+                  <Link href="/live" className="flex items-center gap-4 group">
+                    <span className="text-lg md:text-xl font-bold uppercase border-b-4 border-black group-hover:text-primary transition-colors">Start Live Coaching</span>
+                    <motion.span
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                    >
+                      <ArrowRight className="w-6 h-8 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
+                    </motion.span>
+                  </Link>
+                </div>
               </motion.div>
             </div>
           </div>
@@ -267,22 +280,22 @@ export default function Home() {
               READY TO UPGRADE YOUR INTELLECTUAL CAPITAL?
             </h2>
             <div className="flex flex-col md:flex-row gap-6 justify-center">
+              <Link href="/live">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-primary text-white text-xl md:text-2xl font-black uppercase px-12 py-6 border-r-8 border-b-8 border-white/20 hover:border-white transition-all w-full md:w-auto"
+                >
+                  Start Live Session
+                </motion.button>
+              </Link>
               <Link href="/upload">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-primary text-white text-xl md:text-2xl font-black uppercase px-12 py-6 border-r-8 border-b-8 border-white/20 hover:border-white transition-all"
+                  className="bg-black text-white text-xl md:text-2xl font-black uppercase px-12 py-6 border-r-8 border-b-8 border-primary hover:border-white transition-all w-full md:w-auto"
                 >
-                  Upload Session
-                </motion.button>
-              </Link>
-              <Link href="/login">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-white text-black text-xl md:text-2xl font-black uppercase px-12 py-6 border-r-8 border-b-8 border-gray-300 hover:bg-gray-100 transition-all"
-                >
-                  Sign In
+                  Upload Video
                 </motion.button>
               </Link>
             </div>
