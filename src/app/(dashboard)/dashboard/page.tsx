@@ -3,16 +3,25 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getSessions, Session } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { FileVideo, ArrowUpRight, TrendingUp, Clock, CheckCircle } from "lucide-react";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    if (!user?.id) {
+      setSessions([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchSessions = async () => {
       try {
-        const data = await getSessions();
+        const data = await getSessions(user.id);
         if (Array.isArray(data)) {
           setSessions(data);
         }
@@ -23,7 +32,7 @@ export default function DashboardPage() {
       }
     };
     fetchSessions();
-  }, []);
+  }, [user?.id]);
 
   const recentSessions = Array.isArray(sessions) ? sessions.slice(0, 3) : [];
 
@@ -32,7 +41,7 @@ export default function DashboardPage() {
       {/* Welcome Header */}
       <div className="mb-8 md:mb-12">
         <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2 font-headline">Dashboard</h1>
-        <p className="text-on-surface-variant font-medium">Welcome back. Here's your coaching overview.</p>
+        <p className="text-on-surface-variant font-medium">Welcome back. Here&apos;s your coaching overview.</p>
       </div>
 
       {/* Stats Grid */}

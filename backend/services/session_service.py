@@ -13,6 +13,7 @@ class Session:
         user_id: str,
         filename: str,
         file_url: str,
+        mentor_name: Optional[str] = None,
         status: str = "uploaded",
         stages_completed: Optional[List[str]] = None,
         mentor_score: Optional[float] = None,
@@ -20,6 +21,7 @@ class Session:
     ):
         self.id = id
         self.user_id = user_id
+        self.mentor_name = mentor_name or user_id
         self.filename = filename
         self.file_url = file_url
         self.status = status
@@ -31,6 +33,7 @@ class Session:
         return {
             "id": self.id,
             "user_id": self.user_id,
+            "mentor_name": self.mentor_name,
             "filename": self.filename,
             "file_url": self.file_url,
             "status": self.status,
@@ -40,11 +43,12 @@ class Session:
         }
 
 class SessionService:
-    def create_session(self, user_id: str, filename: str, file_url: str) -> Session:
+    def create_session(self, user_id: str, mentor_name: str, filename: str, file_url: str) -> Session:
         session_id = str(uuid.uuid4())
         session = Session(
             id=session_id,
             user_id=user_id,
+            mentor_name=mentor_name,
             filename=filename,
             file_url=file_url,
             status="uploaded",
@@ -86,12 +90,14 @@ class SessionService:
             logger.error(f"Failed to update session status in DB: {e}")
         return None
 
-    def list_sessions(self, user_id: Optional[str] = None) -> List[Session]:
+    def list_sessions(self, user_id: Optional[str] = None, mentor_name: Optional[str] = None) -> List[Session]:
         try:
             supabase = Config.get_supabase()
             query = supabase.table("sessions").select("*").order("created_at", desc=True)
-            if user_id and user_id != "anonymous":
+            if user_id:
                 query = query.eq("user_id", user_id)
+            if mentor_name:
+                query = query.eq("mentor_name", mentor_name)
             result = query.execute()
             if result.data:
                 return [Session(**row) for row in result.data]

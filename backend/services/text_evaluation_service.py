@@ -40,6 +40,11 @@ class TextEvaluationService:
             1. clarity: How clearly is the mentor speaking and explaining concepts without jargon or confusion?
             2. structure: Is there a logical flow to the explanation?
             3. technical_correctness: Does the mentor seem to grasp the subject matter they are explaining?
+
+            Be fair and human-centered:
+            - Do not penalize accent, dialect, or speaking style.
+            - Focus on explanation quality, conceptual correctness, and teachability.
+            - Use the full range (0.0-1.0) and avoid always returning mid values.
             
             Return ONLY a valid JSON object exactly like this:
             {{
@@ -78,7 +83,7 @@ class TextEvaluationService:
             
         except Exception as e:
             logger.error(f"Text evaluation failed, using fallback: {e}")
-            # Fallback so pipeline doesn't completely crash if Gemini fails
+            # Neutral fallback so pipeline can continue without bias
             eval_data = TextEvaluation(session_id, 0.5, 0.5, 0.5)
             try:
                 supabase = Config.get_supabase()

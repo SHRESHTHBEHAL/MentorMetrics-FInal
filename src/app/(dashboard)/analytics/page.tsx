@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { getSessions, Session } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import {
   BarChart3,
   TrendingUp,
@@ -11,16 +13,62 @@ import {
   AlertTriangle,
   Clock3,
   Activity,
+  CheckCircle,
+  Cpu,
+  Zap,
+  MoreHorizontal,
+  FileText,
 } from "lucide-react";
 
+const pipelineStages = [
+  {
+    id: "transcribing",
+    label: "Transcribing",
+    description: "Audio duration: 42:15. Multi-speaker identified.",
+    icon: CheckCircle,
+  },
+  {
+    id: "audio_analysis",
+    label: "Audio Analysis",
+    description: "Tonality, pitch variance, and pause frequency analyzed.",
+    icon: Cpu,
+  },
+  {
+    id: "visual_analysis",
+    label: "Visual Analysis",
+    description: "Micro-expressions and body posture mapping in progress.",
+    icon: Zap,
+  },
+  {
+    id: "scoring",
+    label: "Scoring",
+    description: "Comparing against 450+ mentorship benchmarks.",
+    icon: MoreHorizontal,
+  },
+  {
+    id: "report_generation",
+    label: "Report Generation",
+    description: "Synthesizing actionable feedback blocks.",
+    icon: FileText,
+  },
+];
+
 export default function AnalyticsPage() {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    if (!user?.id) {
+      setSessions([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchSessions = async () => {
       try {
-        const data = await getSessions();
+        const data = await getSessions(user.id);
         if (Array.isArray(data)) {
           const sorted = [...data].sort(
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
@@ -34,7 +82,7 @@ export default function AnalyticsPage() {
       }
     };
     fetchSessions();
-  }, []);
+  }, [user?.id]);
 
   const hasData = sessions.length > 0;
   const completedSessions = sessions.filter((s) => s.status === "complete");
@@ -67,6 +115,32 @@ export default function AnalyticsPage() {
   const midCount = validScores.filter((s) => s >= 6 && s < 8).length;
   const lowCount = validScores.filter((s) => s < 6).length;
   const scoreTotal = validScores.length || 1;
+
+  const latestSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+  const latestCompletedStages = latestSession?.stages_completed || [];
+  const activeStageIndex =
+    latestSession && latestSession.status === "processing"
+      ? latestCompletedStages.length
+      : -1;
+
+  if (!hasData && !loading) {
+    return (
+      <div className="p-4 md:p-8">
+        <div className="mb-8 md:mb-12">
+          <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">Analytics</h1>
+          <p className="text-on-surface-variant font-medium">Track organizational progress, reliability, and score quality.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-neutral-300 bg-neutral-50">
+          <BarChart3 className="w-16 h-16 text-neutral-300 mb-4" />
+          <p className="text-xl font-black text-neutral-600 uppercase mb-2">No Analytics Data Yet</p>
+          <p className="text-sm text-neutral-500 max-w-md">Upload and complete your first mentor session to see score trends, consistency metrics, and pipeline health analytics.</p>
+          <Link href="/upload" className="mt-6 bg-primary text-white font-black px-6 py-3 border-2 border-black text-sm uppercase hover:bg-black transition-colors">
+            Upload Your First Session
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8">
@@ -180,6 +254,84 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {latestSession && (
+        <div className="bg-white border-2 border-black p-6 md:p-8 mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <h2 className="text-xl font-black uppercase tracking-widest">Latest Session Pipeline</h2>
+            <span
+              className={`text-xs font-black uppercase px-3 py-1 border-2 border-black ${
+                latestSession.status === "complete"
+                  ? "bg-black text-white"
+                  : latestSession.status === "failed"
+                  ? "bg-red-600 text-white border-red-700"
+                  : "bg-primary text-white"
+              }`}
+            >
+              {latestSession.status}
+            </span>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            {pipelineStages.map((stage, index) => {
+              const isCompleteStage = latestCompletedStages.includes(stage.id);
+              const isActiveStage = index === activeStageIndex;
+              const isPendingStage = !isCompleteStage && !isActiveStage;
+
+              return (
+                <div
+                  key={stage.id}
+                  className={`p-4 md:p-5 flex justify-between items-center border-2 ${
+                    isCompleteStage
+                      ? "bg-neutral-50 border-black"
+                      : isActiveStage
+                      ? "bg-blue-50 border-primary"
+                      : "bg-neutral-50 border-neutral-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <stage.icon
+                      className={`w-6 h-6 md:w-7 md:h-7 ${
+                        isCompleteStage || isActiveStage
+                          ? "text-primary"
+                          : "text-neutral-400"
+                      }`}
+                    />
+                    <div>
+                      <h3
+                        className={`font-bold text-sm md:text-lg uppercase tracking-wide ${
+                          isActiveStage ? "text-primary" : "text-black"
+                        }`}
+                      >
+                        {stage.label}
+                      </h3>
+                      <p
+                        className={`text-xs md:text-sm mt-0.5 ${
+                          isPendingStage ? "text-neutral-400" : "text-neutral-700"
+                        }`}
+                      >
+                        {stage.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`text-xs font-bold px-3 py-1.5 uppercase tracking-wider ${
+                      isCompleteStage
+                        ? "bg-black text-white"
+                        : isActiveStage
+                        ? "text-primary border-2 border-primary bg-primary/5"
+                        : "text-neutral-400"
+                    }`}
+                  >
+                    {isCompleteStage ? "COMPLETE" : isActiveStage ? "RUNNING" : "PENDING"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         <div className="xl:col-span-2 bg-white border-2 border-black p-6 md:p-8">

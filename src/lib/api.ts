@@ -18,8 +18,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export interface Session {
   id: string;
+  user_id: string;
+  mentor_name: string;
   filename: string;
   status: string;
+  stages_completed?: string[];
   created_at: string;
   mentor_score?: number;
   file_url: string;
@@ -35,7 +38,10 @@ export interface TranscriptSegment {
 export interface SessionResults {
   session_id: string;
   status: string;
+  user_id: string;
+  mentor_name: string;
   filename: string;
+  file_url: string;
   scores?: {
     engagement: number;
     communication_clarity: number;
@@ -49,6 +55,11 @@ export interface SessionResults {
     strengths: string[];
     improvements: string[];
     actionable_tips: string[];
+    milestones: {
+      timestamp: number;
+      label: string;
+      commentary: string;
+    }[];
   };
   transcript?: {
     text: string;
@@ -66,8 +77,13 @@ export interface SessionResults {
   };
 }
 
-export async function getSessions(): Promise<Session[]> {
-  const response = await fetchApi<{sessions: Session[]}>("/api/sessions/list");
+export async function getSessions(userId: string, mentorName?: string): Promise<Session[]> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (mentorName) {
+    params.set("mentor_name", mentorName);
+  }
+  const query = `?${params.toString()}`;
+  const response = await fetchApi<{sessions: Session[]}>(`/api/sessions/list${query}`);
   return response.sessions;
 }
 
@@ -87,9 +103,11 @@ export async function getResults(sessionId: string): Promise<SessionResults> {
   return fetchApi(`/api/results/${sessionId}`);
 }
 
-export async function uploadVideo(file: File): Promise<{ session_id: string }> {
+export async function uploadVideo(file: File, mentorName: string, userId: string): Promise<{ session_id: string }> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("mentor_name", mentorName);
+  formData.append("user_id", userId);
 
   const response = await fetch(`${API_BASE_URL}/api/upload`, {
     method: "POST",
@@ -105,4 +123,40 @@ export async function uploadVideo(file: File): Promise<{ session_id: string }> {
 
 export async function startProcessing(sessionId: string): Promise<void> {
   await fetchApi(`/api/process/${sessionId}`, { method: "POST" });
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function chatWithCoach(
+  sessionId: string,
+  message: string,
+  history: ChatMessage[]
+): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message, history }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: "Unknown error" }));
+    throw new Error(err.detail || "Chat request failed");
+  }
+  const data = await response.json();
+  return data.reply;
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete session");
+  }
+}
+
+export function getExportUrl(sessionId: string): string {
+  return `${API_BASE_URL}/api/export/${sessionId}`;
 }

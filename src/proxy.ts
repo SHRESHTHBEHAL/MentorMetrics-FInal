@@ -9,7 +9,6 @@ const protectedPrefixes = [
   "/analytics",
   "/mentors",
   "/settings",
-  "/library",
 ];
 
 const authRoutes = ["/login", "/register"];

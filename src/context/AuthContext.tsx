@@ -30,9 +30,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      // Fallback timeout - if Supabase doesn't respond in 5s, assume no session
+      setLoading(false);
+    }, 5000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(timeoutId);
       setUser(session?.user ?? null);
       syncAuthCookie(Boolean(session?.user));
+      setLoading(false);
+    }).catch(() => {
+      clearTimeout(timeoutId);
       setLoading(false);
     });
 
@@ -41,7 +50,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       syncAuthCookie(Boolean(session?.user));
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

@@ -5,6 +5,10 @@ import os
 
 from api.sessions import router as sessions_router
 from api.results import router as results_router
+from api.chat import router as chat_router
+from api.live import router as live_router
+from api.settings import router as settings_router
+from api.export import router as export_router
 from utils.config import Config
 
 app = FastAPI(
@@ -23,7 +27,12 @@ app.add_middleware(
 
 app.include_router(sessions_router)
 app.include_router(results_router)
+app.include_router(chat_router)
+app.include_router(live_router)
+app.include_router(settings_router)
+app.include_router(export_router)
 
+# Serve local uploads directory for video playback
 Config.ensure_upload_dir()
 uploads_dir = Config.UPLOAD_DIR
 if os.path.exists(uploads_dir):

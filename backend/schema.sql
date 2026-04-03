@@ -6,10 +6,12 @@ CREATE TABLE IF NOT EXISTS public.sessions (
     user_id TEXT NOT NULL,
     filename TEXT NOT NULL,
     file_url TEXT NOT NULL,
+    mentor_name TEXT,
     status TEXT NOT NULL DEFAULT 'uploaded',
     stages_completed JSONB DEFAULT '[]'::jsonb,
     mentor_score FLOAT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 2. Create transcripts table
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS public.reports (
     strengths JSONB NOT NULL DEFAULT '[]'::jsonb,
     improvements JSONB NOT NULL DEFAULT '[]'::jsonb,
     actionable_tips JSONB NOT NULL DEFAULT '[]'::jsonb,
+    milestones JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -86,3 +89,36 @@ CREATE POLICY "Allow public all operations on visual_evaluations" ON public.visu
 CREATE POLICY "Allow public all operations on text_evaluations" ON public.text_evaluations FOR ALL USING (true);
 CREATE POLICY "Allow public all operations on final_scores" ON public.final_scores FOR ALL USING (true);
 CREATE POLICY "Allow public all operations on reports" ON public.reports FOR ALL USING (true);
+
+-- 8. Create user_settings table
+CREATE TABLE IF NOT EXISTS public.user_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL UNIQUE,
+    display_name TEXT,
+    notifications_enabled BOOLEAN DEFAULT true,
+    weekly_reports BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public all operations on user_settings" ON public.user_settings FOR ALL USING (true);
+
+CREATE TRIGGER update_user_settings_updated_at
+    BEFORE UPDATE ON public.user_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Auto-update updated_at on sessions
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_sessions_updated_at
+    BEFORE UPDATE ON public.sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

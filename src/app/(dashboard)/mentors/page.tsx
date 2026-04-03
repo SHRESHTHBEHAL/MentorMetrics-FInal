@@ -1,47 +1,67 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
-import { getSessions, Session } from "@/lib/api";
-import { Users, TrendingUp, Award, UserCircle2 } from "lucide-react";
+import { getSessions } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { Users, Award, UserCircle2, ArrowRight } from "lucide-react";
 
 interface MentorStats {
-  userId: string;
+  mentorName: string;
   totalSessions: number;
+  completedSessions: number;
   averageScore: number;
+  bestScore: number;
 }
 
 export default function MentorsPage() {
+  const { user } = useAuth();
   const [mentors, setMentors] = useState<MentorStats[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    if (!user?.id) {
+      setMentors([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchMentors = async () => {
       try {
-        const data = await getSessions();
+        const data = await getSessions(user.id);
         if (Array.isArray(data)) {
-          // Group by user_id
-          const mentorMap = new Map<string, { totalScore: number; count: number }>();
-          
-          data.forEach(session => {
-            const uid = session.user_id || "Unknown Mentor";
-            const score = session.mentor_score || 0;
-            
-            if (mentorMap.has(uid)) {
-              const current = mentorMap.get(uid)!;
-              mentorMap.set(uid, { totalScore: current.totalScore + score, count: current.count + 1 });
-            } else {
-              mentorMap.set(uid, { totalScore: score, count: 1 });
+          const mentorMap = new Map<string, { sessions: number; scores: number[] }>();
+
+          data.forEach((session) => {
+            const mentorName = session.mentor_name?.trim() || "Unknown Mentor";
+            const isScored = session.status === "complete" && typeof session.mentor_score === "number";
+
+            if (!mentorMap.has(mentorName)) {
+              mentorMap.set(mentorName, { sessions: 0, scores: [] });
+            }
+
+            const current = mentorMap.get(mentorName);
+            if (!current) return;
+
+            current.sessions += 1;
+            if (isScored) {
+              current.scores.push(session.mentor_score as number);
             }
           });
 
-          const stats: MentorStats[] = Array.from(mentorMap.entries()).map(([userId, data]) => ({
-            userId,
-            totalSessions: data.count,
-            averageScore: data.count > 0 ? Number((data.totalScore / data.count).toFixed(1)) : 0
+          const stats: MentorStats[] = Array.from(mentorMap.entries()).map(([mentorName, mentor]) => ({
+            mentorName,
+            totalSessions: mentor.sessions,
+            completedSessions: mentor.scores.length,
+            averageScore:
+              mentor.scores.length > 0
+                ? Number((mentor.scores.reduce((sum, score) => sum + score, 0) / mentor.scores.length).toFixed(1))
+                : 0,
+            bestScore: mentor.scores.length > 0 ? Math.max(...mentor.scores) : 0,
           }));
-          
-          // Sort by highest average score
-          stats.sort((a, b) => b.averageScore - a.averageScore);
+
+          stats.sort((a, b) => b.totalSessions - a.totalSessions || b.averageScore - a.averageScore);
           setMentors(stats);
         }
       } catch (error) {
@@ -51,7 +71,7 @@ export default function MentorsPage() {
       }
     };
     fetchMentors();
-  }, []);
+  }, [user?.id]);
 
   return (
     <div className="p-4 md:p-8">
@@ -76,7 +96,7 @@ export default function MentorsPage() {
             <Award className="w-5 h-5 text-primary" />
           </div>
           <div className="text-4xl md:text-6xl font-black">
-            {mentors.length > 0 ? mentors[0].averageScore : "0"}
+            {mentors.length > 0 ? mentors.reduce((max, m) => Math.max(max, m.averageScore), 0).toFixed(1) : "0.0"}
           </div>
         </div>
       </div>
@@ -98,15 +118,19 @@ export default function MentorsPage() {
         ) : (
           <div className="divide-y-2 divide-black">
             {mentors.map((mentor, idx) => (
-              <div key={idx} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-neutral-100 transition-colors gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-black text-white flex items-center justify-center">
+              <Link
+                key={`${mentor.mentorName}-${idx}`}
+                href={`/mentors/${encodeURIComponent(mentor.mentorName)}`}
+                className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-neutral-100 transition-colors gap-4"
+              >
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-12 h-12 bg-black text-white flex items-center justify-center shrink-0">
                     <UserCircle2 className="w-6 h-6" />
                   </div>
-                  <div>
-                    <p className="font-black uppercase text-lg">{mentor.userId === "anonymous" ? "Anonymous Mentor" : mentor.userId}</p>
+                  <div className="min-w-0">
+                    <p className="font-black uppercase text-lg truncate" title={mentor.mentorName}>{mentor.mentorName}</p>
                     <p className="text-xs font-bold text-neutral-500 tracking-widest uppercase">
-                      {mentor.totalSessions} Session{mentor.totalSessions !== 1 ? 's' : ''} Analyzed
+                      {mentor.totalSessions} Session{mentor.totalSessions !== 1 ? "s" : ""} · {mentor.completedSessions} Completed
                     </p>
                   </div>
                 </div>
@@ -114,22 +138,19 @@ export default function MentorsPage() {
                 <div className="flex items-center gap-6">
                   <div className="text-right">
                     <span className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Avg Score</span>
-                    <span className={`text-2xl font-black ${mentor.averageScore >= 7 ? 'text-primary' : mentor.averageScore < 5 ? 'text-red-600' : 'text-yellow-600'}`}>
+                    <span className={`text-2xl font-black ${mentor.averageScore >= 7 ? "text-primary" : mentor.averageScore < 5 ? "text-red-600" : "text-yellow-600"}`}>
                       {mentor.averageScore.toFixed(1)}
                     </span>
                   </div>
                   <div className="text-right border-l-2 border-neutral-300 pl-6">
-                    <span className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Status</span>
-                    {mentor.averageScore >= 7 ? (
-                      <span className="text-xs font-bold bg-green-100 text-green-800 px-3 py-1 uppercase border border-green-800">Expert</span>
-                    ) : mentor.averageScore >= 5 ? (
-                      <span className="text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 uppercase border border-blue-800">Proficient</span>
-                    ) : (
-                      <span className="text-xs font-bold bg-red-100 text-red-800 px-3 py-1 uppercase border border-red-800">Developing</span>
-                    )}
+                    <span className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Best</span>
+                    <span className="text-lg font-black">{mentor.bestScore.toFixed(1)}</span>
+                  </div>
+                  <div className="border-l-2 border-neutral-300 pl-6">
+                    <ArrowRight className="w-5 h-5" />
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -35,6 +35,40 @@ class FinalScores:
         }
 
 class FinalScoreService:
+    @staticmethod
+    def _clamp(value: float, low: float, high: float) -> float:
+        return max(low, min(high, value))
+
+    def _ratio_to_percent(self, value: Optional[float], default: float = 0.6) -> float:
+        raw = default if value is None else value
+        # Human-like grading: Map raw [0.0, 1.0] to a [50.0, 100.0] scale.
+        # This prevents minor mistakes from dragging scores down to 0%.
+        mapped_score = (float(raw) * 50.0) + 50.0
+        return self._clamp(mapped_score, 0.0, 100.0)
+
+    def _band_score(
+        self,
+        value: Optional[float],
+        ideal_low: float,
+        ideal_high: float,
+        hard_low: float,
+        hard_high: float,
+        default: float,
+    ) -> float:
+        v = default if value is None else float(value)
+        floor = 50.0
+        if v <= hard_low or v >= hard_high:
+            return floor
+        if ideal_low <= v <= ideal_high:
+            return 100.0
+        
+        if v < ideal_low:
+            pct = (v - hard_low) / (ideal_low - hard_low)
+        else:
+            pct = (hard_high - v) / (hard_high - ideal_high)
+            
+        return self._clamp(floor + (pct * (100.0 - floor)), floor, 100.0)
+
     def calculate(
         self,
         session_id: str,
@@ -42,23 +76,78 @@ class FinalScoreService:
         text_evaluation: dict,
         visual_evaluation: dict
     ) -> FinalScores:
-        engagement = (audio_features.get("clarity_score", 0) * 100 + 5) / 1.05
-        communication = (text_evaluation.get("clarity", 0) * 100 + 3) / 1.02
-        technical = (text_evaluation.get("technical_correctness", 0) * 100 + 2) / 1.01
-        pacing = (100 - (audio_features.get("silence_ratio", 0) * 100)) * 0.8
-        interactive = ((visual_evaluation.get("face_visibility_score", 0) +
-                       visual_evaluation.get("gesture_score", 0)) / 2 * 100)
+        text_clarity = self._ratio_to_percent(text_evaluation.get("clarity"), default=0.6)
+        text_structure = self._ratio_to_percent(text_evaluation.get("structure"), default=0.6)
+        text_technical = self._ratio_to_percent(text_evaluation.get("technical_correctness"), default=0.7)
 
-        mentor_score = (engagement * 0.25 + communication * 0.25 +
-                       technical * 0.20 + pacing * 0.15 + interactive * 0.15) / 10
+        audio_clarity = self._ratio_to_percent(audio_features.get("clarity_score"), default=0.6)
+        speech_rate_score = self._band_score(
+            value=audio_features.get("wpm"),
+            ideal_low=110.0,
+            ideal_high=165.0,
+            hard_low=80.0,
+            hard_high=210.0,
+            default=135.0,
+        )
+        pause_balance_score = self._band_score(
+            value=audio_features.get("silence_ratio"),
+            ideal_low=0.10,
+            ideal_high=0.28,
+            hard_low=0.03,
+            hard_high=0.45,
+            default=0.18,
+        )
+
+        face_visibility = self._ratio_to_percent(visual_evaluation.get("face_visibility_score"), default=0.5)
+        gaze_forward = self._ratio_to_percent(visual_evaluation.get("gaze_forward_score"), default=0.5)
+        gesture = self._ratio_to_percent(visual_evaluation.get("gesture_score"), default=0.5)
+
+        communication = (
+            text_clarity * 0.55
+            + audio_clarity * 0.25
+            + speech_rate_score * 0.20
+        )
+
+        pacing = (
+            text_structure * 0.45
+            + speech_rate_score * 0.35
+            + pause_balance_score * 0.20
+        )
+
+        interactive = (
+            gaze_forward * 0.45
+            + gesture * 0.35
+            + face_visibility * 0.20
+        )
+
+        engagement = (
+            interactive * 0.40
+            + speech_rate_score * 0.30
+            + pause_balance_score * 0.20
+            + text_clarity * 0.10
+        )
+
+        technical = (
+            text_technical * 0.80
+            + text_structure * 0.20
+        )
+
+        mentor_percent = (
+            engagement * 0.20
+            + communication * 0.24
+            + technical * 0.24
+            + pacing * 0.16
+            + interactive * 0.16
+        )
+        mentor_score = self._clamp(mentor_percent / 10.0, 0.0, 10.0)
 
         scores = FinalScores(
             session_id=session_id,
-            engagement=round(engagement, 1),
-            communication_clarity=round(communication, 1),
-            technical_correctness=round(technical, 1),
-            pacing_structure=round(pacing, 1),
-            interactive_quality=round(interactive, 1),
+            engagement=round(self._clamp(engagement, 0.0, 100.0), 1),
+            communication_clarity=round(self._clamp(communication, 0.0, 100.0), 1),
+            technical_correctness=round(self._clamp(technical, 0.0, 100.0), 1),
+            pacing_structure=round(self._clamp(pacing, 0.0, 100.0), 1),
+            interactive_quality=round(self._clamp(interactive, 0.0, 100.0), 1),
             mentor_score=round(mentor_score, 1)
         )
         

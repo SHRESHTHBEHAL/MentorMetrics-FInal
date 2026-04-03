@@ -37,7 +37,7 @@ class AudioFeatureService:
             "-vn", "-acodec", "pcm_s16le", 
             "-ar", "16000", "-ac", "1", wav_path
         ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
     def analyze(self, session_id: str, video_path: str, transcript_text: str) -> AudioFeatures:
         wav_path = video_path.rsplit('.', 1)[0] + ".wav"
@@ -55,7 +55,7 @@ class AudioFeatureService:
             
             # 2. Silence Ratio
             # librosa.effects.split returns intervals of non-silent regions
-            intervals = librosa.effects.split(y, top_db=20)
+            intervals = librosa.effects.split(y, top_db=25)
             non_silent_samples = sum([end - start for start, end in intervals])
             total_samples = len(y)
             silence_ratio = 1.0 - (non_silent_samples / total_samples) if total_samples > 0 else 0.0

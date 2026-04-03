@@ -54,18 +54,17 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-md border-b-2 border-black flex justify-between items-center px-6 py-4">
+      <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur-md border-b-2 border-black flex justify-between items-center px-4 md:px-6 py-3 md:py-4">
         <motion.div
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-2xl font-black tracking-tighter uppercase"
+          className="text-lg md:text-2xl font-black tracking-tighter uppercase"
         >
           MENTORMETRICS
         </motion.div>
         <div className="hidden md:flex gap-12 items-center">
           <Link href="/history" className="text-primary font-bold underline decoration-2 underline-offset-4 text-sm uppercase">History</Link>
-          <Link href="/library" className="text-black font-medium text-sm uppercase hover:bg-black hover:text-white px-2 py-1 transition-colors">Library</Link>
         </div>
         <motion.div
           initial={{ x: 100, opacity: 0 }}
@@ -73,23 +72,23 @@ export default function Home() {
           transition={{ duration: 0.5 }}
         >
           <Link href="/upload">
-            <button className="bg-primary text-white px-6 py-2 font-bold uppercase tracking-tight border-b-4 border-r-4 border-black hover:bg-black transition-all hover:translate-y-1">
-              Upload Session
+            <button className="bg-primary text-white px-4 md:px-6 py-2 font-bold text-xs md:text-sm uppercase tracking-tight border-b-4 border-r-4 border-black hover:bg-black transition-all hover:translate-y-1">
+              Upload
             </button>
           </Link>
         </motion.div>
       </nav>
 
       {/* Hero Section */}
-      <main className="pt-24 min-h-screen flex flex-col">
-        <section className="grid grid-cols-1 lg:grid-cols-12 w-full px-6 gap-0">
+      <main className="pt-20 md:pt-24 min-h-screen flex flex-col">
+        <section className="grid grid-cols-1 lg:grid-cols-12 w-full px-4 md:px-6 gap-0">
           {/* Massive Headline */}
-          <div className="lg:col-span-8 pt-12 pb-20 border-b-2 border-black">
+          <div className="lg:col-span-8 pt-8 md:pt-12 pb-12 md:pb-20 border-b-2 border-black">
             <motion.h1
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="text-[clamp(4rem,15vw,12rem)] font-black leading-[0.85] tracking-tighter uppercase"
+              className="text-[clamp(3rem,15vw,12rem)] font-black leading-[0.85] tracking-tighter uppercase"
             >
               MENTOR<br />METRICS
             </motion.h1>
@@ -97,33 +96,33 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="text-2xl md:text-4xl font-bold max-w-2xl leading-tight text-primary uppercase mt-8 font-headline"
+              className="text-lg md:text-2xl lg:text-4xl font-bold max-w-2xl leading-tight text-primary uppercase mt-4 md:mt-8 font-headline"
             >
               AI that doesn&apos;t just score you. It coaches you.
             </motion.p>
           </div>
           
           {/* Secondary Content */}
-          <div className="lg:col-span-4 border-l-2 border-b-2 border-black p-8 bg-surface-container flex flex-col justify-end">
+          <div className="lg:col-span-4 border-l-2 border-b-2 border-black p-4 md:p-8 bg-surface-container flex flex-col justify-end">
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="space-y-6"
+              className="space-y-4 md:space-y-6"
             >
               <div className="text-xs font-bold uppercase tracking-widest text-secondary">Status: Alpha 01</div>
-              <p className="text-lg leading-relaxed font-medium">
+              <p className="text-sm md:text-lg leading-relaxed font-medium">
                 The first editorial-grade AI coaching platform. We analyze high-stakes dialogue to reveal the invisible architecture of mentorship.
               </p>
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-3 md:gap-4 pt-2 md:pt-4">
                 <motion.div whileHover={{ scale: 1.2, rotate: 5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <LayoutDashboard className="w-10 h-10" />
+                  <LayoutDashboard className="w-8 h-8 md:w-10 md:h-10" />
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.2, rotate: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Bolt className="w-10 h-10" />
+                  <Bolt className="w-8 h-8 md:w-10 md:h-10" />
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.2, rotate: 5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Shield className="w-10 h-10" />
+                  <Shield className="w-8 h-8 md:w-10 md:h-10" />
                 </motion.div>
               </div>
             </motion.div>
@@ -136,7 +135,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="lg:col-span-7 relative h-[600px] bg-black overflow-hidden"
+            className="lg:col-span-7 relative h-[400px] md:h-[600px] bg-black overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-black to-black" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -145,14 +144,14 @@ export default function Home() {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="text-center"
               >
-                <div className="text-6xl md:text-9xl font-black text-white/10 uppercase tracking-tighter">AI COACHING</div>
+                <div className="text-4xl md:text-9xl font-black text-white/10 uppercase tracking-tighter">AI COACHING</div>
                 <motion.div
                   initial={{ scale: 0 }}
                   whileInView={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200, delay: 0.3 }}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                 >
-                  <Play className="w-20 h-20 text-white/30" />
+                  <Play className="w-12 h-12 md:w-20 md:h-20 text-white/30" />
                 </motion.div>
               </motion.div>
             </div>
@@ -160,10 +159,10 @@ export default function Home() {
               initial={{ y: 100, opacity: 0 }}
               whileInView={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6 }}
-              className="absolute bottom-0 left-0 p-12 bg-primary text-white max-w-md"
+              className="absolute bottom-0 left-0 p-4 md:p-12 bg-primary text-white max-w-xs md:max-w-md"
             >
               <span className="text-xs font-bold uppercase block mb-2">Visual Index 001</span>
-              <h3 className="text-3xl font-bold uppercase font-headline">Precision Analysis of Classroom Flow</h3>
+              <h3 className="text-xl md:text-3xl font-bold uppercase font-headline">Precision Analysis of Classroom Flow</h3>
             </motion.div>
           </motion.div>
           
@@ -173,10 +172,10 @@ export default function Home() {
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="border-l-2 border-b-2 border-black p-8 flex flex-col justify-between"
+                className="border-l-2 border-b-2 border-black p-4 md:p-8 flex flex-col justify-between"
               >
                 <span className="text-xs font-bold uppercase">Confidence Score</span>
-                <div className="text-6xl font-black">
+                <div className="text-4xl md:text-6xl font-black">
                   <Counter end={98} suffix="%" />
                 </div>
                 <div className="h-2 w-full bg-surface-container mt-4 overflow-hidden">
@@ -192,31 +191,31 @@ export default function Home() {
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="border-l-2 border-b-2 border-black p-8 flex flex-col justify-between bg-black text-white"
+                className="border-l-2 border-b-2 border-black p-4 md:p-8 flex flex-col justify-between bg-black text-white"
               >
                 <span className="text-xs font-bold uppercase">Real-time Latency</span>
-                <div className="text-6xl font-black">
+                <div className="text-4xl md:text-6xl font-black">
                   <Counter end={12} suffix="MS" />
                 </div>
               </motion.div>
             </div>
-            <div className="flex-grow p-12 border-l-2 border-black flex items-center bg-white">
+            <div className="flex-grow p-4 md:p-12 border-l-2 border-black flex items-center bg-white">
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6 }}
-                className="space-y-8"
+                className="space-y-4 md:space-y-8"
               >
-                <h2 className="text-5xl font-black uppercase leading-none tracking-tighter font-headline">
+                <h2 className="text-3xl md:text-5xl font-black uppercase leading-none tracking-tighter font-headline">
                   Designed for<br />High-Stakes<br />Environments.
                 </h2>
                 <Link href="/upload" className="flex items-center gap-4 group">
-                  <span className="text-xl font-bold uppercase border-b-4 border-black group-hover:text-primary transition-colors">Upload Session</span>
+                  <span className="text-lg md:text-xl font-bold uppercase border-b-4 border-black group-hover:text-primary transition-colors">Upload Session</span>
                   <motion.span
                     animate={{ x: [0, 5, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
+                    <ArrowRight className="w-6 h-8 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
                   </motion.span>
                 </Link>
               </motion.div>
@@ -292,7 +291,7 @@ export default function Home() {
       </main>
 
       {/* Minimal Footer */}
-      <footer className="bg-white border-t-2 border-black flex justify-center items-center px-8 py-6 w-full font-mono text-xs uppercase">
+      <footer className="bg-white border-t-2 border-black flex justify-center items-center px-4 md:px-8 py-4 md:py-6 w-full font-mono text-[10px] md:text-xs uppercase">
         <div className="text-neutral-500">© 2026 MENTORMETRICS</div>
       </footer>
     </div>

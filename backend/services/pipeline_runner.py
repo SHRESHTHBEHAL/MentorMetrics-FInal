@@ -1,7 +1,8 @@
 import asyncio
 import os
 import tempfile
-from typing import Callable, Optional
+import time
+from typing import Callable, Optional, Dict, Any
 import traceback
 import logging
 from services.session_service import session_service
@@ -25,19 +26,31 @@ class PipelineRunner:
     ]
 
     def __init__(self):
-        self._running_pipelines = {}
+        self._running_pipelines: Dict[str, Dict[str, Any]] = {}
 
     async def run(self, session_id: str, filename: str, progress_callback: Optional[Callable] = None):
         stages_completed = []
         mentor_score = None
+        pipeline_start = time.time()
+        self._running_pipelines[session_id] = {
+            "stages_completed": [],
+            "stage_timings": {},
+            "logs": [],
+            "started_at": pipeline_start,
+        }
+
+        def add_log(msg: str):
+            elapsed = time.time() - pipeline_start
+            self._running_pipelines[session_id]["logs"].append(f"[{elapsed:.1f}s] {msg}")
 
         try:
-            await asyncio.to_thread(session_service.update_status, session_id, "processing", stages_completed, mentor_score)
+            add_log("Pipeline initialized")
+            await asyncio.to_thread(session_service.update_status, session_id, "processing", [], mentor_score)
 
             for i, stage in enumerate(self.STAGES):
                 logger.info(f"Session {session_id} entering stage: {stage}")
-                
-                await asyncio.sleep(0.5)
+                add_log(f"Starting stage: {stage}")
+                stage_start = time.time()
 
                 try:
                     mentor_score = await asyncio.to_thread(self._run_sync_stage, stage, session_id, filename, mentor_score)
@@ -45,35 +58,34 @@ class PipelineRunner:
                     logger.error(f"Error in stage {stage}: {eval_err}")
                     raise eval_err
 
+                stage_elapsed = time.time() - stage_start
+                self._running_pipelines[session_id]["stage_timings"][stage] = round(stage_elapsed, 2)
                 stages_completed.append(stage)
-                
+                self._running_pipelines[session_id]["stages_completed"] = stages_completed
+                add_log(f"Stage complete: {stage} ({stage_elapsed:.1f}s)")
+
                 await asyncio.to_thread(session_service.update_status, session_id, "processing", stages_completed, mentor_score)
 
                 if progress_callback:
                     progress_callback(len(stages_completed) / len(self.STAGES) * 100)
 
+            total_time = time.time() - pipeline_start
+            add_log(f"Pipeline complete in {total_time:.1f}s")
             logger.info(f"Session {session_id} pipeline fully complete.")
             await asyncio.to_thread(session_service.update_status, session_id, "complete", stages_completed, mentor_score)
-            
-            # Clean up from storage after processing
-            try:
-                Config.delete_from_storage(f"uploads/{filename}")
-                logger.info(f"Cleaned up {filename} from storage")
-            except Exception as cleanup_err:
-                logger.warning(f"Failed to clean up storage: {cleanup_err}")
-            
+             
         except Exception as e:
             logger.error(f"Pipeline failed for session {session_id}: {e}")
             logger.error(traceback.format_exc())
+            add_log(f"Pipeline FAILED: {str(e)}")
             await asyncio.to_thread(session_service.update_status, session_id, "failed", stages_completed, None)
-            
-            # Still try to clean up on failure
-            try:
-                Config.delete_from_storage(f"uploads/{filename}")
-            except:
-                pass
-            
+        finally:
+            self._running_pipelines.pop(session_id, None)
+             
         return stages_completed
+
+    def get_pipeline_status(self, session_id: str) -> Optional[Dict[str, Any]]:
+        return self._running_pipelines.get(session_id)
 
     def _run_sync_stage(self, stage: str, session_id: str, filename: str, mentor_score: Optional[float]):
         if stage == "transcribing":
@@ -118,13 +130,18 @@ class PipelineRunner:
             transcript = transcript_service.get_transcript(session_id)
             scores = final_score_service.get_scores(session_id)
             audio_features = audio_feature_service.get_features(session_id)
+            visual_features = visual_evaluation_service.get_evaluation(session_id)
             
             if transcript and scores and audio_features:
+                scores_dict = scores.to_dict()
+                scores_dict['transcript_segments'] = [s.to_dict() for s in transcript.segments]
+                
                 report = report_service.generate(
                     session_id,
                     transcript.text,
-                    scores.to_dict(),
-                    audio_features.to_dict()
+                    scores_dict,
+                    audio_features.to_dict(),
+                    visual_features.to_dict() if visual_features else {}
                 )
                 if not report or not report.summary:
                     raise ValueError("AI report generation returned empty summary")

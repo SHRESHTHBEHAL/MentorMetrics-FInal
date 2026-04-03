@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart3, Users, Settings } from "lucide-react";
+import { LayoutDashboard, BarChart3, Users, Settings, Video } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/live", label: "Live Coaching", icon: Video },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/mentors", label: "Mentors", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -22,7 +23,7 @@ export default function SideNavBar() {
       </div>
       <nav className="flex-grow flex flex-col gap-0 mt-4">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

@@ -94,4 +94,14 @@ class TranscriptService:
             logger.error(f"Failed to fetch transcript from DB: {e}")
         return None
 
+    def transcribe_audio_chunk(self, audio_path: str) -> str:
+        """Transcribe a short audio file (for live coaching chunks)."""
+        try:
+            model = self._get_model()
+            result = model.transcribe(audio_path, fp16=False)
+            return result.get("text", "").strip()
+        except Exception as e:
+            logger.error(f"Failed to transcribe audio chunk: {e}")
+            return ""
+
 transcript_service = TranscriptService()

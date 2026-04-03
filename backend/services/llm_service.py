@@ -7,7 +7,7 @@ import aiohttp
 class LLMService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-3-flash-preview"
         self._session = None
 
     async def _get_session(self):
