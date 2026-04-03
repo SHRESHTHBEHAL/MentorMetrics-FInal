@@ -576,7 +576,9 @@ function ResultsContent() {
               SESSION PERFORMANCE SUMMARY
             </h2>
             <p className="text-base md:text-lg leading-relaxed text-secondary italic">
-              {data.report?.summary || "No summary available. Processing may still be in progress."}
+              {data.report?.summary
+                ? formatBoldText(data.report.summary)
+                : "No summary available. Processing may still be in progress."}
             </p>
           </header>
 
