@@ -25,6 +25,7 @@ class ReportContent(BaseModel):
     strengths: List[str]
     improvements: List[str]
     actionable_tips: List[str]
+    milestones: List[dict]
 
 class TranscriptData(BaseModel):
     text: str
@@ -43,7 +44,10 @@ class VisualData(BaseModel):
 class SessionResultsResponse(BaseModel):
     session_id: str
     status: str
+    user_id: str
+    mentor_name: str
     filename: str
+    file_url: str
     scores: Optional[ScoreBreakdown] = None
     report: Optional[ReportContent] = None
     transcript: Optional[TranscriptData] = None
@@ -63,6 +67,43 @@ async def get_results(session_id: str):
     scores = final_score_service.get_scores(session_id)
     report = report_service.get_report(session_id)
 
+    def report_needs_refresh(existing_report) -> bool:
+        if not existing_report:
+            return True
+        summary = (existing_report.summary or "").strip()
+        strengths = existing_report.strengths or []
+        improvements = existing_report.improvements or []
+        tips = existing_report.actionable_tips or []
+        milestones = existing_report.milestones or []
+
+        # Force refresh if the summary looks generic or too short for a deeply personalized report
+        is_generic_fallback = summary.startswith("Your session scored")
+        
+        return (
+            len(summary) < 250
+            or len(strengths) < 3
+            or len(improvements) < 3
+            or len(tips) < 4
+            or len(milestones) < 4
+            or is_generic_fallback
+        )
+
+    if (
+        session.status == "complete"
+        and transcript
+        and scores
+        and report_needs_refresh(report)
+    ):
+        scores_dict = scores.to_dict()
+        scores_dict["transcript_segments"] = [s.to_dict() for s in transcript.segments]
+        report = report_service.generate(
+            session_id=session_id,
+            transcript_text=transcript.text,
+            scores=scores_dict,
+            audio_features=audio_features.to_dict() if audio_features else {},
+            visual_features=visual_eval.to_dict() if visual_eval else {},
+        )
+
     scores_data = None
     if scores:
         scores_data = ScoreBreakdown(
@@ -80,7 +121,8 @@ async def get_results(session_id: str):
             summary=report.summary,
             strengths=report.strengths,
             improvements=report.improvements,
-            actionable_tips=report.actionable_tips
+            actionable_tips=report.actionable_tips,
+            milestones=report.milestones,
         )
 
     transcript_data = None
@@ -109,7 +151,10 @@ async def get_results(session_id: str):
     return SessionResultsResponse(
         session_id=session.id,
         status=session.status,
+        user_id=session.user_id,
+        mentor_name=session.mentor_name,
         filename=session.filename,
+        file_url=session.file_url,
         scores=scores_data,
         report=report_data,
         transcript=transcript_data,
