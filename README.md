@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MentorMetrics 🚀
 
-## Getting Started
+**MentorMetrics** is an AI-powered platform designed to evaluate, analyze, and dramatically improve mentorship and teaching sessions. By combining advanced audio processing, visual analysis, and LLM-driven personalized coaching, MentorMetrics helps educators understand their strengths, weaknesses, and engagement levels with pinpoint accuracy.
 
-First, run the development server:
+## ✨ Features
+
+- **🎤 Upload & Live Coaching:** Record live sessions or upload existing video/audio files for deep analysis.
+- **🧠 Hyper-Personalized AI Reports:** Utilizing Google's Gemini models, generate highly detailed coaching reports that anchor feedback to specific transcript moments and teaching concepts.
+- **📊 Multi-Modal Analytics:** 
+  - **Audio:** Tracks Words Per Minute (WPM), silence ratios, and vocal clarity.
+  - **Visual:** Analyzes face visibility, gaze direction, and gesturing using MediaPipe.
+- **📜 Interactive Transcript & Timeline:** Clickable transcripts synced to the video, complete with AI-generated milestones and color-coded engagement tracking.
+- **💬 AI Coach Chatbot:** Context-aware assistant that answers questions specifically based on your session's performance.
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework:** Next.js 16.2 (App Router), React 19
+- **Styling:** Tailwind CSS 4
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **Data Fetching:** React Query
+
+### Backend
+- **Framework:** FastAPI (Python)
+- **AI Models:** Google Generative AI (Gemini), OpenAI Whisper (Transcription), MediaPipe (Pose/Face detection)
+- **Database & Storage:** Supabase (PostgreSQL, Auth, Storage Buckets)
+
+---
+
+## 🚀 Getting Started (Local Development)
+
+### 1. Clone the repository
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/your-username/MentorMetrics.git
+cd MentorMetrics/mentor-metrics
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Frontend Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   The app will be available at [http://localhost:3000](http://localhost:3000).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Backend Setup
 
-## Learn More
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create a virtual environment and install dependencies:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. Create a `.env` file inside the `backend` directory:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   DATABASE_URL=your_postgres_url
+   GEMINI_API_KEY=your_gemini_api_key
+   ```
+4. Run the FastAPI server:
+   ```bash
+   uvicorn main:app --reload --port 8000
+   ```
+   The API will be available at [http://localhost:8000](http://localhost:8000).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ☁️ Deployment Guide
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Deploying the Frontend to Vercel
 
-## Deploy on Vercel
+The Next.js frontend is fully optimized for **Vercel** deployment.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push your code to GitHub.
+2. Go to your [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New Project**.
+3. Import your `MentorMetrics` repository.
+4. **Important Framework Settings:** Make sure the **Framework Preset** is set to `Next.js`. 
+5. Add your Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_API_BASE_URL` *(Set this to your deployed backend URL, e.g., `https://your-backend.onrender.com`)*
+6. Click **Deploy**.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deploying the Backend
+
+**⚠️ Important Note for Vercel Deployment:** 
+Because the Python backend relies on heavy ML packages like `opencv-python`, `openai-whisper`, and `mediapipe`, the dependencies far exceed Vercel's Serverless Function size limit (250MB). **Do not deploy the FastAPI backend to Vercel.**
+
+Instead, deploy the backend to a containerized or VM-based provider such as:
+- **Render** (Web Service)
+- **Railway**
+- **Fly.io**
+- **DigitalOcean App Platform**
+
+**Basic Deployment Steps (e.g., Render):**
+1. Connect your GitHub repo to a new Web Service.
+2. Set the Root Directory to `backend`.
+3. Set the Build Command to `pip install -r requirements.txt`.
+4. Set the Start Command to `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+5. Add all your `.env` variables to the Environment section.
+6. Once deployed, update your Vercel frontend's `NEXT_PUBLIC_API_BASE_URL` to point to the new backend URL.
