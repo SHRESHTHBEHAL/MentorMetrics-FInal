@@ -39,6 +39,21 @@ type SegmentQuality = {
   timelineColor: string;
 };
 
+function formatBoldText(text: string) {
+  if (!text) return text;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={index} className="font-black text-black">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
+
 function VideoTimeline({
   milestones,
   segments,
@@ -574,7 +589,7 @@ function ResultsContent() {
                 <ul className="text-sm flex flex-col gap-3 md:gap-4">
                   {data.report.strengths.map((item, i) => (
                     <li key={i} className="pl-4 md:pl-6 border-l-4 border-primary">
-                      {item}
+                      {formatBoldText(item)}
                     </li>
                   ))}
                 </ul>
@@ -590,7 +605,7 @@ function ResultsContent() {
                 <ul className="text-sm flex flex-col gap-3 md:gap-4">
                   {data.report.improvements.map((item, i) => (
                     <li key={i} className="pl-4 md:pl-6 border-l-4 border-black">
-                      {item}
+                      {formatBoldText(item)}
                     </li>
                   ))}
                 </ul>
@@ -608,7 +623,7 @@ function ResultsContent() {
                 {data.report.actionable_tips.map((tip, i) => (
                   <div key={i} className="flex flex-col gap-1 md:gap-2">
                     <span className="text-xl md:text-2xl font-black text-primary">0{i + 1}.</span>
-                    <p className="text-xs md:text-sm font-semibold uppercase leading-tight">{tip}</p>
+                    <p className="text-xs md:text-sm font-semibold uppercase leading-tight">{formatBoldText(tip)}</p>
                   </div>
                 ))}
               </div>
