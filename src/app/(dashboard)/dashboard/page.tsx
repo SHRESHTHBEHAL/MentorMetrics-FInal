@@ -13,7 +13,9 @@ export default function DashboardPage() {
     const fetchSessions = async () => {
       try {
         const data = await getSessions();
-        setSessions(data);
+        if (Array.isArray(data)) {
+          setSessions(data);
+        }
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
       } finally {
@@ -23,7 +25,7 @@ export default function DashboardPage() {
     fetchSessions();
   }, []);
 
-  const recentSessions = sessions.slice(0, 3);
+  const recentSessions = Array.isArray(sessions) ? sessions.slice(0, 3) : [];
 
   return (
     <div className="p-4 md:p-8">
@@ -40,7 +42,7 @@ export default function DashboardPage() {
             <span className="text-xs font-bold uppercase tracking-widest">Total Sessions</span>
             <FileVideo className="w-5 h-5 opacity-50" />
           </div>
-          <div className="text-4xl md:text-6xl font-black">{sessions.length || 124}</div>
+          <div className="text-4xl md:text-6xl font-black">{Array.isArray(sessions) ? sessions.length : 0}</div>
         </div>
         <div className="bg-white border-2 border-black p-6 md:p-8">
           <div className="flex justify-between items-start mb-4">
@@ -48,9 +50,9 @@ export default function DashboardPage() {
             <TrendingUp className="w-5 h-5 text-primary" />
           </div>
           <div className="text-4xl md:text-6xl font-black">
-            {sessions.length > 0
+            {Array.isArray(sessions) && sessions.length > 0
               ? (sessions.reduce((sum, s) => sum + (s.mentor_score || 0), 0) / sessions.length).toFixed(1)
-              : "8.2"}
+              : "0"}
           </div>
         </div>
         <div className="bg-white border-2 border-black p-6 md:p-8">
@@ -58,7 +60,19 @@ export default function DashboardPage() {
             <span className="text-xs font-bold uppercase tracking-widest">Recent Activity</span>
             <Clock className="w-5 h-5 text-secondary" />
           </div>
-          <div className="text-4xl md:text-6xl font-black">2h ago</div>
+          <div className="text-4xl md:text-6xl font-black">
+            {sessions.length > 0
+              ? (() => {
+                  const lastSession = new Date(sessions[0].created_at);
+                  const now = new Date();
+                  const diffMs = now.getTime() - lastSession.getTime();
+                  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                  if (diffHours < 1) return "Just now";
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  return `${Math.floor(diffHours / 24)}d ago`;
+                })()
+              : "—"}
+          </div>
         </div>
       </div>
 
@@ -101,7 +115,7 @@ export default function DashboardPage() {
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : sessions.length === 0 ? (
+        ) : !Array.isArray(sessions) || sessions.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-neutral-500 mb-4">No sessions yet</p>
             <Link href="/upload" className="text-primary font-bold uppercase text-sm">

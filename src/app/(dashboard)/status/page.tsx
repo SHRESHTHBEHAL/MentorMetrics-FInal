@@ -1,10 +1,10 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getSessionStatus } from "@/lib/api";
-import { CheckCircle, RefreshCw, Hourglass, FileText, Terminal, Loader2 } from "lucide-react";
+import { CheckCircle, RefreshCw, Hourglass, FileText, Terminal, Loader2, AlertTriangle } from "lucide-react";
 
 const stages = [
   { id: "transcribing", label: "Transcribing", icon: CheckCircle },
@@ -15,19 +15,15 @@ const stages = [
 ];
 
 function StatusContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<string>("");
-  const [progress, setProgress] = useState(0);
-  const [logs, setLogs] = useState<string[]>([
-    "[09:21:44] INITIALIZING NEURAL ENGINE v4.2.0",
-    "[09:21:45] LOADING VIDEO STREAM... SUCCESS",
-    "[09:21:46] EXTRACTING KEYFRAMES",
-    "[09:21:48] SPEECH-TO-TEXT LATENCY: 12ms",
-    "[09:21:50] DETECTED SPEAKER 01: MENTOR",
-    "[09:21:50] DETECTED SPEAKER 02: MENTEE",
-    "[09:21:55] SENTIMENT ANALYSIS ATTACHED TO BUFFER",
-  ]);
+  const [stagesCompleted, setStagesCompleted] = useState<string[]>([]);
+  const [dataPoints, setDataPoints] = useState<number>(0);
+  const [latency, setLatency] = useState<number>(0);
+  const [nodeLoad, setNodeLoad] = useState<number>(0);
+  const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -36,9 +32,35 @@ function StatusContent() {
       try {
         const data = await getSessionStatus(sessionId);
         setStatus(data.status);
+        setStagesCompleted(data.stages_completed || []);
+
+        if (data.status === "failed") {
+          setLogs((data.logs && data.logs.length > 0 ? data.logs : []).concat([
+            "[ERROR] Pipeline failed during AI report generation.",
+            "[ACTION] Retry upload or check backend Gemini model/quota.",
+          ]));
+        }
         
-        const completed = data.stages_completed?.length || 0;
-        setProgress((completed / stages.length) * 100);
+        // Update metrics from real data
+        if (data.data_points_scanned) {
+          setDataPoints(data.data_points_scanned);
+        }
+        if (data.latency_ms) {
+          setLatency(data.latency_ms);
+        }
+        if (data.node_load) {
+          setNodeLoad(data.node_load);
+        }
+        
+        // Update logs from real data if available
+        if (data.logs && data.logs.length > 0) {
+          setLogs(data.logs);
+        }
+
+        // Auto-redirect to results when complete
+        if (data.status === "complete") {
+          setTimeout(() => router.push(`/results?session_id=${sessionId}`), 1000);
+        }
       } catch (error) {
         console.error("Failed to fetch status:", error);
       }
@@ -47,14 +69,17 @@ function StatusContent() {
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
-  }, [sessionId]);
+  }, [sessionId, router]);
+
+  const progress = (stagesCompleted.length / stages.length) * 100;
+  const failedStageIndex = status === "failed" ? Math.min(stagesCompleted.length, stages.length - 1) : -1;
 
   return (
     <div className="p-4 md:p-12 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-8 md:mb-12">
         <h2 className="text-4xl md:text-8xl font-black text-primary tracking-tighter leading-none mb-4 italic">
-          ANALYZING SESSION...
+          {status === "failed" ? "PROCESSING FAILED" : "ANALYZING SESSION..."}
         </h2>
         <div className="flex items-center gap-4">
           <div className="h-1 flex-1 bg-surface-container-highest overflow-hidden">
@@ -62,6 +87,12 @@ function StatusContent() {
           </div>
           <span className="font-mono text-lg md:text-xl font-bold">{progress.toFixed(1)}%</span>
         </div>
+        {status === "failed" && (
+          <div className="mt-4 p-4 border-2 border-black bg-red-100 text-red-900 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-xs md:text-sm font-bold uppercase">Report generation failed. Please retry with a new upload after backend restart.</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
@@ -69,9 +100,9 @@ function StatusContent() {
         <div className="lg:col-span-7">
           <div className="space-y-3 md:space-y-4">
             {stages.map((stage, index) => {
-              const stageProgress = (index / stages.length) * 100;
-              const isComplete = progress > stageProgress + 20;
-              const isActive = progress > stageProgress && !isComplete;
+              const isComplete = stagesCompleted.includes(stage.id);
+              const isFailed = status === "failed" && index === failedStageIndex && !isComplete;
+              const isActive = status === "processing" && !isComplete && (index === 0 || stagesCompleted.includes(stages[index - 1].id));
               
               return (
                 <div
@@ -79,6 +110,8 @@ function StatusContent() {
                   className={`p-4 md:p-6 flex justify-between items-center border-2 transition-all ${
                     isComplete
                       ? "bg-surface-container-highest border-black"
+                      : isFailed
+                      ? "bg-red-100 border-4 border-red-600"
                       : isActive
                       ? "bg-surface border-4 border-primary"
                       : "bg-surface-container-low opacity-50"
@@ -87,7 +120,7 @@ function StatusContent() {
                   <div className="flex items-center gap-3 md:gap-4">
                     <stage.icon
                       className={`w-5 h-5 md:w-6 md:h-6 ${isActive ? "animate-spin text-primary" : ""}`}
-                      style={{ color: isComplete || isActive ? "#0038FF" : "#5e5e5e" }}
+                      style={{ color: isComplete || isActive ? "#0038FF" : isFailed ? "#DC2626" : "#5e5e5e" }}
                     />
                     <div>
                       <h3 className="font-bold text-sm md:text-lg uppercase">{stage.label}</h3>
@@ -96,7 +129,7 @@ function StatusContent() {
                   <span className={`text-xs font-bold px-2 py-1 ${
                     isComplete ? "bg-black text-white" : isActive ? "text-primary border-2 border-primary" : "text-secondary"
                   }`}>
-                    {isComplete ? "COMPLETE" : isActive ? "RUNNING" : "PENDING"}
+                    {isComplete ? "COMPLETE" : isFailed ? "FAILED" : isActive ? "RUNNING" : "PENDING"}
                   </span>
                 </div>
               );
@@ -115,12 +148,17 @@ function StatusContent() {
               <Terminal className="w-5 h-5 md:w-6 md:h-6 text-primary" />
             </div>
             <div className="font-mono text-[10px] md:text-[11px] space-y-1 md:space-y-2 h-40 md:h-64 overflow-y-auto">
-              {logs.map((log, i) => (
-                <p key={i} className={log.includes("INITIALIZING") ? "text-primary" : "text-gray-400"}>
-                  {log}
-                </p>
-              ))}
-              <p className="animate-pulse text-primary">[09:22:01] RUNNING VISUAL ANALYSIS...</p>
+              {logs.length > 0 ? (
+                logs.map((log, i) => (
+                  <p key={i} className={log.includes("COMPLETE") || log.includes("SUCCESS") ? "text-primary" : "text-gray-400"}>
+                    {log}
+                  </p>
+                ))
+              ) : (
+                <p className="text-gray-400">Waiting for processing to start...</p>
+              )}
+              {status === "processing" && <p className="animate-pulse text-primary">Processing in progress...</p>}
+              {status === "failed" && <p className="text-red-400">Pipeline failed during report generation.</p>}
             </div>
           </div>
 
@@ -129,19 +167,19 @@ function StatusContent() {
             <div className="flex justify-between items-start mb-2 md:mb-4">
               <span className="text-xs font-bold text-on-surface">Data Points Scanned</span>
             </div>
-            <div className="text-4xl md:text-5xl font-black tracking-tighter">842,910</div>
-            <p className="text-xs text-secondary mt-2">REDUNDANCY CHECK: ACTIVE</p>
+            <div className="text-4xl md:text-5xl font-black tracking-tighter">{dataPoints.toLocaleString()}</div>
+            {status === "processing" && <p className="text-xs text-secondary mt-2">REDUNDANCY CHECK: ACTIVE</p>}
           </div>
 
           {/* Latency & Node Load */}
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-black p-4 flex flex-col justify-between aspect-square">
               <span className="text-[10px] font-bold uppercase">Latency</span>
-              <div className="text-2xl md:text-3xl font-black">12ms</div>
+              <div className="text-2xl md:text-3xl font-black">{latency > 0 ? `${latency}ms` : "—"}</div>
             </div>
             <div className="border-2 border-black p-4 flex flex-col justify-between aspect-square bg-primary text-white">
               <span className="text-[10px] font-bold uppercase">Node Load</span>
-              <div className="text-2xl md:text-3xl font-black">42%</div>
+              <div className="text-2xl md:text-3xl font-black">{nodeLoad > 0 ? `${nodeLoad}%` : "—"}</div>
             </div>
           </div>
         </div>

@@ -4,34 +4,38 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signUp(email, password);
       if (error) throw error;
 
       const nextPath = searchParams.get("next");
       if (nextPath && nextPath.startsWith("/")) {
         router.push(nextPath);
-      } else {
-        router.push("/dashboard");
+        return;
       }
+
+      setSuccess("Account created. You can now continue to your dashboard.");
+      router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to sign in");
+      setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setLoading(false);
     }
@@ -40,20 +44,25 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black tracking-tighter uppercase">MENTORMETRICS</h1>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mt-2">AI COACHING</p>
         </div>
 
-        {/* Form */}
         <div className="bg-white border-2 border-black p-6 md:p-8">
-          <h2 className="text-2xl font-black uppercase mb-6">Sign In</h2>
-          
+          <h2 className="text-2xl font-black uppercase mb-6">Create Account</h2>
+
           {error && (
             <div className="bg-red-50 border-2 border-red-600 p-4 mb-6 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <p className="text-red-600 font-bold text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border-2 border-green-700 p-4 mb-6 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" />
+              <p className="text-green-700 font-bold text-sm">{success}</p>
             </div>
           )}
 
@@ -74,7 +83,8 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
-                placeholder="Password"
+                minLength={6}
+                placeholder="Password (min 6 characters)"
                 className="w-full px-12 py-4 border-2 border-black focus:outline-none focus:border-primary text-sm"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -85,19 +95,18 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-primary text-white font-black uppercase py-4 border-2 border-black hover:bg-black transition-colors disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Creating..." : "Create Account"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm font-medium">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary font-bold underline decoration-2 underline-offset-4">
-              Create one
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary font-bold underline decoration-2 underline-offset-4">
+              Sign in
             </Link>
           </p>
         </div>
 
-        {/* Back to home */}
         <div className="mt-6 text-center">
           <Link href="/" className="text-xs font-bold uppercase text-neutral-500 hover:text-black transition-colors">
             ← Back to Home

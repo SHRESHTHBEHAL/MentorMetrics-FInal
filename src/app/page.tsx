@@ -250,29 +250,6 @@ export default function Home() {
           ))}
         </section>
 
-        {/* Stats Section */}
-        <section className="grid grid-cols-2 md:grid-cols-4 w-full border-b-2 border-black bg-black text-white">
-          {[
-            { label: "Sessions Analyzed", value: 12500, suffix: "+" },
-            { label: "Mentors Trained", value: 3400, suffix: "+" },
-            { label: "Hours of Coaching", value: 28000, suffix: "+" },
-            { label: "Avg Score Improvement", value: 23, suffix: "%" },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="p-8 md:p-12 border-b-2 md:border-b-0 md:border-r-2 border-white/20 text-center"
-            >
-              <div className="text-3xl md:text-5xl font-black">
-                <Counter end={stat.value} suffix={stat.suffix} />
-              </div>
-              <div className="text-xs md:text-sm font-bold uppercase mt-2 text-white/60">{stat.label}</div>
-            </motion.div>
-          ))}
-        </section>
-
         {/* CTA Section */}
         <motion.section
           initial={{ opacity: 0 }}

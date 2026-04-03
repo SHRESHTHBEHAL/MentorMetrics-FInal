@@ -58,6 +58,13 @@ function ResultsContent() {
     { key: "interactive_quality", label: "Interaction", value: scores.interactive_quality },
   ];
 
+  const formatTimestamp = (secondsRaw: number) => {
+    const minutes = Math.floor(secondsRaw / 60);
+    const seconds = secondsRaw % 60;
+    const secondsFormatted = seconds.toFixed(2).padStart(5, "0");
+    return `${minutes}:${secondsFormatted}`;
+  };
+
   return (
     <div className="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
       {/* Hero Metric Section */}
@@ -70,7 +77,9 @@ function ResultsContent() {
           </div>
           <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-white/30 flex justify-between items-center">
             <span className="text-xs font-bold uppercase tracking-widest">Mastery Level</span>
-            <span className="text-lg md:text-xl font-black italic">EXPERT</span>
+            <span className="text-lg md:text-xl font-black italic">
+              {scores.mentor_score >= 8 ? "EXPERT" : scores.mentor_score >= 6 ? "SKILLED" : "DEVELOPING"}
+            </span>
           </div>
           <div className="absolute -right-4 -bottom-4 opacity-10 pointer-events-none">
             <FileText className="w-24 h-24 md:w-40 md:h-40" />
@@ -106,41 +115,53 @@ function ResultsContent() {
           <header className="mb-8 md:mb-10 max-w-2xl">
             <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 md:mb-6 font-headline">SESSION PERFORMANCE SUMMARY</h2>
             <p className="text-base md:text-lg leading-relaxed text-secondary italic">
-              {data.report?.summary || "The session demonstrated high emotional intelligence and pedagogical depth. While the mentor excelled at validating the learner's experience, there is a distinct opportunity to refine the instructional pacing to prevent cognitive overload."}
+              {data.report?.summary || "No summary available. Processing may still be in progress."}
             </p>
           </header>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 border-t-2 border-black pt-6 md:pt-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 border-t-2 border-black pt-6 md:pt-10">
             <div>
               <h4 className="text-sm font-black text-primary uppercase tracking-widest mb-4 md:mb-6 flex items-center">
                 <CheckCircle className="w-4 h-4 md:w-5 md:h-5 mr-2" /> Strengths
               </h4>
-              <ul className="text-sm flex flex-col gap-3 md:gap-4">
-                {(data.report?.strengths || ["Superior empathy cues during student struggle points", "Precise articulation of complex technical concepts", "Effective use of open-ended questioning techniques"]).map((item, i) => (
-                  <li key={i} className="pl-4 md:pl-6 border-l-4 border-primary">{item}</li>
-                ))}
-              </ul>
+              {data.report?.strengths && data.report.strengths.length > 0 ? (
+                <ul className="text-sm flex flex-col gap-3 md:gap-4">
+                  {data.report.strengths.map((item, i) => (
+                    <li key={i} className="pl-4 md:pl-6 border-l-4 border-primary">{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neutral-500">No strengths identified yet</p>
+              )}
             </div>
             <div>
               <h4 className="text-sm font-black uppercase tracking-widest mb-4 md:mb-6 flex items-center">
                 <TrendingUp className="w-4 h-4 md:w-5 md:h-5 mr-2" /> Improvements
               </h4>
-              <ul className="text-sm flex flex-col gap-3 md:gap-4">
-                {(data.report?.improvements || ["Reduce filler words during transitions", "Wait-time after questions below optimal threshold"]).map((item, i) => (
-                  <li key={i} className="pl-4 md:pl-6 border-l-4 border-black">{item}</li>
-                ))}
-              </ul>
+              {data.report?.improvements && data.report.improvements.length > 0 ? (
+                <ul className="text-sm flex flex-col gap-3 md:gap-4">
+                  {data.report.improvements.map((item, i) => (
+                    <li key={i} className="pl-4 md:pl-6 border-l-4 border-black">{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neutral-500">No improvements identified yet</p>
+              )}
             </div>
           </div>
           <div className="mt-8 md:mt-12 p-6 md:p-8 bg-surface-container border-2 border-black">
             <h4 className="text-sm font-black uppercase tracking-widest mb-4">Actionable Tips</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              {(data.report?.actionable_tips || ["Implement Pause-Process-Respond", "Shift from telling to scaffolding", "Summarize key takeaways every 15 min"]).map((tip, i) => (
-                <div key={i} className="flex flex-col gap-1 md:gap-2">
-                  <span className="text-xl md:text-2xl font-black text-primary">0{i + 1}.</span>
-                  <p className="text-xs md:text-sm font-semibold uppercase leading-tight">{tip}</p>
-                </div>
-              ))}
-            </div>
+            {data.report?.actionable_tips && data.report.actionable_tips.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                {data.report.actionable_tips.map((tip, i) => (
+                  <div key={i} className="flex flex-col gap-1 md:gap-2">
+                    <span className="text-xl md:text-2xl font-black text-primary">0{i + 1}.</span>
+                    <p className="text-xs md:text-sm font-semibold uppercase leading-tight">{tip}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-500">No actionable tips available yet</p>
+            )}
           </div>
         </article>
 
@@ -151,30 +172,17 @@ function ResultsContent() {
           </div>
           <div className="flex-grow overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-8 bg-surface">
             {(data.transcript?.segments || []).length === 0 ? (
-              <div className="space-y-4">
-                {[
-                  { time: "04:12", speaker: "Mentor", text: "That's a very sharp observation. Most people overlook the structural integrity at this stage." },
-                  { time: "04:25", speaker: "Learner", text: "I was thinking about using a cantilevered approach, but I'm worried about the cost implications." },
-                  { time: "04:38", speaker: "Mentor", text: "Cost is a valid constraint. Let's look at the materials spreadsheet." },
-                  { time: "05:10", speaker: "Mentor", text: "Exactly. By pivoting there, you save 12% in material costs while actually increasing the tensile strength by about 5%." },
-                ].map((seg, i) => (
-                  <div key={i} className="flex gap-3 md:gap-4">
-                    <span className="text-[10px] font-bold text-primary w-10 md:w-12 pt-1">{seg.time}</span>
-                    <div className="flex-grow">
-                      <span className="text-[10px] font-black uppercase bg-black text-white px-1 md:px-2 py-0.5 mb-1 md:mb-2 inline-block">{seg.speaker}</span>
-                      <p className="text-sm leading-relaxed border-l-2 border-black pl-2 md:pl-4">{seg.text}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-4 md:p-8 text-center">
+                <FileText className="w-8 h-8 mx-auto mb-4 text-neutral-400" />
+                <p className="text-sm text-neutral-500">No transcript available yet</p>
               </div>
             ) : (
               data.transcript?.segments.map((seg, i) => (
                 <div key={i} className="flex gap-3 md:gap-4">
                   <span className="text-[10px] font-bold text-primary w-10 md:w-12 pt-1">
-                    {Math.floor(seg.start / 60)}:{String(seg.start % 60).padStart(2, "0")}
+                    {formatTimestamp(seg.start)}
                   </span>
                   <div className="flex-grow">
-                    <span className="text-[10px] font-black uppercase bg-black text-white px-1 md:px-2 py-0.5 mb-1 md:mb-2 inline-block">{seg.speaker}</span>
                     <p className="text-sm leading-relaxed border-l-2 border-black pl-2 md:pl-4">{seg.text}</p>
                   </div>
                 </div>

@@ -37,20 +37,20 @@ export default function HistoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-0 mb-8 md:mb-12 border-2 border-black">
         <div className="p-4 md:p-6 bg-surface-container-highest border-b-2 md:border-b-0 md:border-r-2 border-black flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Total Sessions</span>
-          <span className="text-3xl md:text-4xl font-black">{sessions.length || 124}</span>
+          <span className="text-3xl md:text-4xl font-black">{loading ? "..." : sessions.length}</span>
         </div>
         <div className="p-4 md:p-6 bg-surface-container-highest border-b-2 md:border-b-0 md:border-r-2 border-black flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Avg Mentor Score</span>
           <span className="text-3xl md:text-4xl font-black">
-            {sessions.length > 0
-              ? (sessions.reduce((sum, s) => sum + (s.mentor_score || 0), 0) / sessions.length).toFixed(1)
-              : "8.2"}
+            {loading ? "..." : sessions.length > 0
+              ? (sessions.filter(s => s.status !== "failed").reduce((sum, s) => sum + (s.mentor_score || 0), 0) / sessions.filter(s => s.status !== "failed").length).toFixed(1) || "—"
+              : "—"}
           </span>
         </div>
         <div className="p-4 md:p-6 bg-surface-container-highest flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Last Update</span>
           <span className="text-3xl md:text-4xl font-black">
-            {sessions[0] ? new Date(sessions[0].created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "OCT 24"}
+            {loading ? "..." : sessions[0] ? new Date(sessions[0].created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
           </span>
         </div>
       </div>
@@ -70,33 +70,10 @@ export default function HistoryPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : sessions.length === 0 ? (
-          /* Demo Data */
-          <div className="divide-y-2 divide-black">
-            {[
-              { name: "Product Roadmap Sync v2", date: "OCT 14, 2024", score: "8.4", type: "Internal" },
-              { name: "Design Critique Framework", date: "OCT 12, 2024", score: "9.1", type: "External" },
-              { name: "Q3 Performance Coaching", date: "OCT 08, 2024", score: "7.8", type: "1:1 Session" },
-              { name: "Executive Leadership Workshop", date: "SEP 29, 2024", score: "8.9", type: "Workshop" },
-              { name: "Stakeholder Interview Series", date: "SEP 22, 2024", score: "6.5", type: "Research" },
-            ].map((session, i) => (
-              <div key={i} className="grid grid-cols-1 md:grid-cols-12 p-4 md:p-6 items-center hover:bg-surface-container transition-colors">
-                <div className="col-span-1 md:col-span-6 mb-2 md:mb-0">
-                  <p className="font-black text-lg md:text-xl uppercase leading-none mb-1">{session.name}</p>
-                  <p className="text-[10px] font-mono text-neutral-500 uppercase">{session.type} • Mentorship ID: MM-{9000 + i}</p>
-                </div>
-                <div className="col-span-1 md:col-span-2 text-center mb-2 md:mb-0">
-                  <span className="font-bold text-sm">{session.date}</span>
-                </div>
-                <div className="col-span-1 md:col-span-2 text-center mb-2 md:mb-0">
-                  <span className="text-2xl font-black text-primary">{session.score}</span>
-                </div>
-                <div className="col-span-1 md:col-span-2 text-right">
-                  <Link href={`/results?session_id=demo-${i}`} className="text-[10px] font-black uppercase underline decoration-2 underline-offset-4 hover:text-primary transition-colors inline-flex items-center">
-                    View Report <ChevronRight className="w-3 h-3 ml-1" />
-                  </Link>
-                </div>
-              </div>
-            ))}
+          <div className="p-8 md:p-12 text-center">
+            <FileVideo className="w-12 h-12 mx-auto mb-4 text-neutral-400" />
+            <p className="text-lg font-bold text-neutral-600 mb-2">No sessions found</p>
+            <p className="text-sm text-neutral-500">Upload a session to get started</p>
           </div>
         ) : (
           /* Real Data */
@@ -113,8 +90,8 @@ export default function HistoryPage() {
                   </span>
                 </div>
                 <div className="col-span-1 md:col-span-2 text-center mb-2 md:mb-0">
-                  <span className="text-2xl font-black text-primary">
-                    {session.mentor_score?.toFixed(1) || "—"}
+                  <span className={`text-2xl font-black ${session.status === "failed" ? "text-red-500" : "text-primary"}`}>
+                    {session.status === "failed" ? "Failed" : session.mentor_score?.toFixed(1) || "—"}
                   </span>
                 </div>
                 <div className="col-span-1 md:col-span-2 text-right">
@@ -132,18 +109,15 @@ export default function HistoryPage() {
         )}
       </div>
 
-      {/* Pagination */}
+      {sessions.length > 0 && (
+      /* Pagination */
       <div className="mt-6 md:mt-8 flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase text-neutral-400 hidden md:block">Showing {sessions.length || 5} of 124 Sessions</span>
+        <span className="text-[10px] font-black uppercase text-neutral-400 hidden md:block">Showing {sessions.length} Sessions</span>
         <div className="flex gap-1 md:gap-2">
           <button className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border-2 border-black font-black bg-black text-white text-xs md:text-sm">1</button>
-          <button className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border-2 border-black font-black hover:bg-primary hover:text-white transition-colors text-xs md:text-sm">2</button>
-          <button className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border-2 border-black font-black hover:bg-primary hover:text-white transition-colors text-xs md:text-sm">3</button>
-          <button className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center border-2 border-black font-black hover:bg-primary hover:text-white transition-colors">
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
+      )}
     </section>
   );
 }

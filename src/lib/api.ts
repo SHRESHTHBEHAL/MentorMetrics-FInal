@@ -67,10 +67,19 @@ export interface SessionResults {
 }
 
 export async function getSessions(): Promise<Session[]> {
-  return fetchApi<Session[]>("/api/sessions/list");
+  const response = await fetchApi<{sessions: Session[]}>("/api/sessions/list");
+  return response.sessions;
 }
 
-export async function getSessionStatus(sessionId: string): Promise<any> {
+export async function getSessionStatus(sessionId: string): Promise<{
+  session_id: string;
+  status: string;
+  stages_completed: string[];
+  data_points_scanned?: number;
+  latency_ms?: number;
+  node_load?: number;
+  logs?: string[];
+}> {
   return fetchApi(`/api/sessions/${sessionId}`);
 }
 
