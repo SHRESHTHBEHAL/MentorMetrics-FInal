@@ -150,16 +150,27 @@ class PipelineRunner:
         return mentor_score
 
     def _download_for_processing(self, filename: str) -> str:
-        temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, filename)
+        """Return the local path to the video file directly — no Supabase download needed."""
+        local_path = os.path.join(Config.UPLOAD_DIR, filename)
+        if os.path.exists(local_path):
+            return local_path
+        # Fallback: try temp dir (legacy sessions uploaded to Supabase)
+        temp_path = os.path.join(tempfile.gettempdir(), filename)
+        if os.path.exists(temp_path):
+            return temp_path
+        # Last resort: download from Supabase for old sessions
+        logger.warning(f"{filename} not found locally, falling back to Supabase download")
         file_data = Config.download_from_storage(f"uploads/{filename}")
-        with open(file_path, "wb") as f:
+        with open(temp_path, "wb") as f:
             f.write(file_data)
-        return file_path
+        return temp_path
 
     def _cleanup_temp_file(self, file_path: str):
+        """Only delete temp files — never delete files in the local uploads dir."""
         try:
-            if os.path.exists(file_path):
+            upload_dir = os.path.abspath(Config.UPLOAD_DIR)
+            abs_path = os.path.abspath(file_path)
+            if not abs_path.startswith(upload_dir) and os.path.exists(file_path):
                 os.remove(file_path)
         except Exception as e:
             logger.warning(f"Failed to cleanup temp file {file_path}: {e}")

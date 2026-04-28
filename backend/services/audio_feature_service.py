@@ -30,6 +30,9 @@ class AudioFeatures:
         }
 
 class AudioFeatureService:
+    def __init__(self):
+        self._features = {}
+
     def _extract_wav(self, video_path: str, wav_path: str):
         # Extracts audio as 16kHz mono wav
         cmd = [
@@ -74,14 +77,8 @@ class AudioFeatureService:
                 silence_ratio=round(float(silence_ratio), 3),
                 clarity_score=round(float(clarity), 3)
             )
-            
-            # DB Storage
-            supabase = Config.get_supabase()
-            try:
-                supabase.table("audio_features").delete().eq("session_id", session_id).execute()
-            except:
-                pass
-            supabase.table("audio_features").insert(features.to_dict()).execute()
+
+            self._features[session_id] = features
             
             return features
             
@@ -93,19 +90,6 @@ class AudioFeatureService:
                 os.remove(wav_path)
 
     def get_features(self, session_id: str) -> Optional[AudioFeatures]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("audio_features").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                return AudioFeatures(
-                    session_id=data["session_id"],
-                    wpm=data["wpm"],
-                    silence_ratio=data["silence_ratio"],
-                    clarity_score=data["clarity_score"]
-                )
-        except Exception as e:
-             logger.error(f"Failed to fetch audio features from DB: {e}")
-        return None
+        return self._features.get(session_id)
 
 audio_feature_service = AudioFeatureService()

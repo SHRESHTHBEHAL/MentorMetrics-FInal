@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 import uuid
 import logging
-from utils.config import Config
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,10 @@ class Session:
         }
 
 class SessionService:
+    def __init__(self):
+        self._sessions = {}
+        self._lock = Lock()
+
     def create_session(self, user_id: str, mentor_name: str, filename: str, file_url: str) -> Session:
         session_id = str(uuid.uuid4())
         session = Session(
@@ -54,55 +58,42 @@ class SessionService:
             status="uploaded",
             stages_completed=[]
         )
-        try:
-            supabase = Config.get_supabase()
-            supabase.table("sessions").insert(session.to_dict()).execute()
-        except Exception as e:
-            logger.error(f"Failed to create session in DB: {e}")
-            raise e
+        with self._lock:
+            self._sessions[session_id] = session
         return session
 
     def get_session(self, session_id: str) -> Optional[Session]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("sessions").select("*").eq("id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                return Session(**data)
-        except Exception as e:
-            logger.error(f"Failed to get session from DB: {e}")
-        return None
+        with self._lock:
+            return self._sessions.get(session_id)
 
     def update_status(self, session_id: str, status: str, stages_completed: List[str], mentor_score: Optional[float] = None) -> Optional[Session]:
-        try:
-            supabase = Config.get_supabase()
-            update_data = {
-                "status": status,
-                "stages_completed": stages_completed
-            }
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if not session:
+                logger.warning(f"Session not found for status update: {session_id}")
+                return None
+
+            session.status = status
+            session.stages_completed = list(stages_completed)
             if mentor_score is not None:
-                update_data["mentor_score"] = mentor_score
-            
-            result = supabase.table("sessions").update(update_data).eq("id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                return Session(**result.data[0])
-        except Exception as e:
-            logger.error(f"Failed to update session status in DB: {e}")
-        return None
+                session.mentor_score = mentor_score
+
+            return session
 
     def list_sessions(self, user_id: Optional[str] = None, mentor_name: Optional[str] = None) -> List[Session]:
-        try:
-            supabase = Config.get_supabase()
-            query = supabase.table("sessions").select("*").order("created_at", desc=True)
-            if user_id:
-                query = query.eq("user_id", user_id)
-            if mentor_name:
-                query = query.eq("mentor_name", mentor_name)
-            result = query.execute()
-            if result.data:
-                return [Session(**row) for row in result.data]
-        except Exception as e:
-            logger.error(f"Failed to list sessions from DB: {e}")
-        return []
+        with self._lock:
+            sessions = list(self._sessions.values())
+
+        if user_id:
+            sessions = [s for s in sessions if s.user_id == user_id]
+        if mentor_name:
+            sessions = [s for s in sessions if s.mentor_name == mentor_name]
+
+        sessions.sort(key=lambda s: s.created_at, reverse=True)
+        return sessions
+
+    def delete_session(self, session_id: str) -> bool:
+        with self._lock:
+            return self._sessions.pop(session_id, None) is not None
 
 session_service = SessionService()

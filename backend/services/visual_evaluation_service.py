@@ -44,15 +44,6 @@ class VisualEvaluationService:
 
     def _save(self, evaluation: VisualEvaluation) -> None:
         self._evaluations[evaluation.session_id] = evaluation
-        try:
-            supabase = Config.get_supabase()
-            try:
-                supabase.table("visual_evaluations").delete().eq("session_id", evaluation.session_id).execute()
-            except Exception:
-                pass
-            supabase.table("visual_evaluations").insert(evaluation.to_dict()).execute()
-        except Exception as e:
-            logger.warning(f"Failed to persist visual evaluation: {e}")
 
     def _default_eval(self, session_id: str) -> VisualEvaluation:
         return VisualEvaluation(
@@ -186,24 +177,7 @@ class VisualEvaluationService:
             return evaluation
 
     def get_evaluation(self, session_id: str) -> Optional[VisualEvaluation]:
-        if session_id in self._evaluations:
-            return self._evaluations[session_id]
-
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("visual_evaluations").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                row = result.data[0]
-                return VisualEvaluation(
-                    session_id=row["session_id"],
-                    face_visibility_score=row["face_visibility_score"],
-                    gaze_forward_score=row["gaze_forward_score"],
-                    gesture_score=row["gesture_score"],
-                )
-        except Exception as e:
-            logger.warning(f"Failed to fetch visual evaluation from DB: {e}")
-
-        return None
+        return self._evaluations.get(session_id)
 
 
 visual_evaluation_service = VisualEvaluationService()

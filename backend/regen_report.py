@@ -13,7 +13,7 @@ from services.audio_feature_service import audio_feature_service
 from services.visual_evaluation_service import visual_evaluation_service
 
 def main():
-    Config.init_supabase()
+    # Config.load_dotenv() is already called in config.py, no need here
     Config.init_gemini()
     supabase = Config.get_supabase()
     

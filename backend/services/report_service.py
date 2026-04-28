@@ -38,6 +38,9 @@ class Report:
 
 
 class ReportService:
+    def __init__(self):
+        self._reports = {}
+
     def _generate_content_with_timeout(self, model, prompt: str):
         timeout_seconds = int(os.getenv("REPORT_LLM_TIMEOUT_SECONDS", "45"))
         executor = ThreadPoolExecutor(max_workers=1)
@@ -275,43 +278,12 @@ CRITICAL Personalization Requirements:
             logger.exception(f"AI report generation failed for {session_id}, using fallback report: {e}")
             report = self._build_fallback_report(session_id, scores, segments)
 
-        supabase = Config.get_supabase()
-        try:
-            supabase.table("reports").delete().eq("session_id", session_id).execute()
-        except Exception:
-            pass
-        try:
-            supabase.table("reports").insert(report.to_dict()).execute()
-        except Exception as e:
-            logger.warning(f"Report insert with milestones failed for {session_id}, retrying without milestones: {e}")
-            legacy_payload = {
-                "session_id": report.session_id,
-                "summary": report.summary,
-                "strengths": report.strengths,
-                "improvements": report.improvements,
-                "actionable_tips": report.actionable_tips,
-            }
-            supabase.table("reports").insert(legacy_payload).execute()
+        self._reports[session_id] = report
 
         return report
 
     def get_report(self, session_id: str) -> Optional[Report]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("reports").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                return Report(
-                    session_id=data["session_id"],
-                    summary=data["summary"],
-                    strengths=data.get("strengths", []),
-                    improvements=data.get("improvements", []),
-                    actionable_tips=data.get("actionable_tips", []),
-                    milestones=data.get("milestones", []),
-                )
-        except Exception as e:
-            logger.error(f"Failed to fetch report from DB: {e}")
-        return None
+        return self._reports.get(session_id)
 
 
 report_service = ReportService()

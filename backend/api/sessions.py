@@ -69,10 +69,34 @@ async def upload_video(file: UploadFile = File(...), mentor_name: str = Form(...
     content_type = file.content_type or "video/mp4"
 
     try:
-        content = await file.read()
-        file_url = Config.upload_to_storage(content, filename, content_type)
+        # Read in 8MB chunks to avoid loading the entire video into RAM
+        CHUNK_SIZE = 8 * 1024 * 1024  # 8MB
+        chunks = []
+        while True:
+            chunk = await file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        content = b"".join(chunks)
+        chunks.clear()
+
+        if len(content) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # Save locally — no Supabase upload needed for demo
+        Config.ensure_upload_dir()
+        local_file_path = os.path.join(Config.UPLOAD_DIR, filename)
+        with open(local_file_path, "wb") as f:
+            f.write(content)
+        del content  # Free RAM immediately
+
+        # The file is served by the /uploads static mount
+        file_url = f"http://localhost:8000/uploads/{filename}"
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Storage upload failed: {str(e)}")
+        logger.error(f"Local save failed for {filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
 
     session = session_service.create_session(
         user_id=user_id,

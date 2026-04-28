@@ -28,6 +28,9 @@ class TextEvaluation:
         }
 
 class TextEvaluationService:
+    def __init__(self):
+        self._evaluations = {}
+
     def evaluate(self, session_id: str, transcript_text: str) -> TextEvaluation:
         try:
             logger.info(f"Starting text evaluation for {session_id}")
@@ -70,14 +73,8 @@ class TextEvaluationService:
                 structure=float(data.get("structure", 0.5)),
                 technical_correctness=float(data.get("technical_correctness", 0.5))
             )
-            
-            # Save to DB
-            supabase = Config.get_supabase()
-            try:
-                supabase.table("text_evaluations").delete().eq("session_id", session_id).execute()
-            except:
-                pass
-            supabase.table("text_evaluations").insert(eval_data.to_dict()).execute()
+
+            self._evaluations[session_id] = eval_data
             
             return eval_data
             
@@ -85,26 +82,10 @@ class TextEvaluationService:
             logger.error(f"Text evaluation failed, using fallback: {e}")
             # Neutral fallback so pipeline can continue without bias
             eval_data = TextEvaluation(session_id, 0.5, 0.5, 0.5)
-            try:
-                supabase = Config.get_supabase()
-                supabase.table("text_evaluations").insert(eval_data.to_dict()).execute()
-            except: pass
+            self._evaluations[session_id] = eval_data
             return eval_data
 
     def get_evaluation(self, session_id: str) -> Optional[TextEvaluation]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("text_evaluations").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                return TextEvaluation(
-                    session_id=data["session_id"],
-                    clarity=data["clarity"],
-                    structure=data["structure"],
-                    technical_correctness=data["technical_correctness"]
-                )
-        except Exception as e:
-            logger.error(f"Failed to fetch text evaluation from DB: {e}")
-        return None
+        return self._evaluations.get(session_id)
 
 text_evaluation_service = TextEvaluationService()

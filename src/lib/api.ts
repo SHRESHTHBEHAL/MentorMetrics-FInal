@@ -99,8 +99,15 @@ export async function getSessionStatus(sessionId: string): Promise<{
   return fetchApi(`/api/sessions/${sessionId}`);
 }
 
-export async function getResults(sessionId: string): Promise<SessionResults> {
-  return fetchApi(`/api/results/${sessionId}`);
+export async function getResults(sessionId: string): Promise<SessionResults | null> {
+  try {
+    return await fetchApi(`/api/results/${sessionId}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("API Error: 404")) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function uploadVideo(file: File, mentorName: string, userId: string): Promise<{ session_id: string }> {

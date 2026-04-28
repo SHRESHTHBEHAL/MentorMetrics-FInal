@@ -35,6 +35,9 @@ class FinalScores:
         }
 
 class FinalScoreService:
+    def __init__(self):
+        self._scores = {}
+
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:
         return max(low, min(high, value))
@@ -150,36 +153,12 @@ class FinalScoreService:
             interactive_quality=round(self._clamp(interactive, 0.0, 100.0), 1),
             mentor_score=round(mentor_score, 1)
         )
-        
-        # Save to DB
-        try:
-            supabase = Config.get_supabase()
-            try:
-                supabase.table("final_scores").delete().eq("session_id", session_id).execute()
-            except: pass
-            supabase.table("final_scores").insert(scores.to_dict()).execute()
-        except Exception as e:
-            logger.error(f"Failed to save final scores to DB: {e}")
-            
+
+        self._scores[session_id] = scores
+             
         return scores
 
     def get_scores(self, session_id: str) -> Optional[FinalScores]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("final_scores").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                return FinalScores(
-                    session_id=data["session_id"],
-                    engagement=data["engagement"],
-                    communication_clarity=data["communication_clarity"],
-                    technical_correctness=data["technical_correctness"],
-                    pacing_structure=data["pacing_structure"],
-                    interactive_quality=data["interactive_quality"],
-                    mentor_score=data["mentor_score"]
-                )
-        except Exception as e:
-             logger.error(f"Failed to fetch final scores from DB: {e}")
-        return None
+        return self._scores.get(session_id)
 
 final_score_service = FinalScoreService()

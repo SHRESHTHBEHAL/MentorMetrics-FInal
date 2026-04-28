@@ -37,6 +37,7 @@ class Transcript:
 class TranscriptService:
     def __init__(self):
         self._model = None
+        self._transcripts = {}
 
     def _get_model(self):
         if self._model is None:
@@ -65,15 +66,8 @@ class TranscriptService:
             
             full_text = result.get("text", "").strip()
             transcript = Transcript(session_id, full_text, segments)
-            
-            # Save to DB
-            supabase = Config.get_supabase()
-            try:
-                # Delete existing if any (fallback/cleanup)
-                supabase.table("transcripts").delete().eq("session_id", session_id).execute()
-            except:
-                pass
-            supabase.table("transcripts").insert(transcript.to_dict()).execute()
+
+            self._transcripts[session_id] = transcript
             
             logger.info("Transcription complete and saved.")
             return transcript
@@ -83,16 +77,7 @@ class TranscriptService:
             raise e
 
     def get_transcript(self, session_id: str) -> Optional[Transcript]:
-        try:
-            supabase = Config.get_supabase()
-            result = supabase.table("transcripts").select("*").eq("session_id", session_id).execute()
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
-                segs = [TranscriptSegment(**s) for s in data.get("segments", [])]
-                return Transcript(session_id=data["session_id"], text=data["text"], segments=segs)
-        except Exception as e:
-            logger.error(f"Failed to fetch transcript from DB: {e}")
-        return None
+        return self._transcripts.get(session_id)
 
     def transcribe_audio_chunk(self, audio_path: str) -> str:
         """Transcribe a short audio file (for live coaching chunks)."""

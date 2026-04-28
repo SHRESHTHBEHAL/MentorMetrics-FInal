@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { uploadVideo } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Plus, Activity, Upload, AlertCircle, X } from "lucide-react";
 
@@ -17,6 +16,7 @@ export default function UploadPage() {
   const [mentorName, setMentorName] = useState("");
   const [mentorError, setMentorError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,19 +87,63 @@ export default function UploadPage() {
       mentorInputRef.current?.focus();
       return;
     }
-    
+
+    if (!user?.id) {
+      setUploadError("Please sign in again to upload");
+      return;
+    }
+
     setUploading(true);
+    setUploadProgress(0);
     setMentorError("");
     setUploadError("");
+
     try {
-      if (!user?.id) {
-        throw new Error("Please sign in again to upload");
-      }
-      const { session_id } = await uploadVideo(file, normalizedMentorName, user.id);
+      const session_id = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("mentor_name", normalizedMentorName);
+        formData.append("user_id", user.id);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve(data.session_id);
+            } catch {
+              reject(new Error("Invalid server response"));
+            }
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.detail || `Upload failed (${xhr.status})`));
+            } catch {
+              reject(new Error(`Upload failed (${xhr.status})`));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error — check your connection."));
+        xhr.ontimeout = () => reject(new Error("Upload timed out. Try a smaller file."));
+
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+        xhr.open("POST", `${apiBase}/api/upload`);
+        xhr.timeout = 10 * 60 * 1000; // 10 minute timeout for large files
+        xhr.send(formData);
+      });
+
       router.push(`/status?session_id=${session_id}`);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Upload failed. Please try again.");
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -200,12 +244,26 @@ export default function UploadPage() {
             <button
               onClick={handleUpload}
               disabled={!file || uploading}
-              className={`w-full md:w-auto font-black text-xl md:text-2xl uppercase px-8 md:px-12 py-4 md:py-6 border-[3px] flex items-center justify-center gap-2 md:gap-4 ${
+              className={`w-full md:w-auto font-black text-xl md:text-2xl uppercase px-8 md:px-12 py-4 md:py-6 border-[3px] flex flex-col items-center justify-center gap-1 ${
                 file ? "bg-primary text-white border-black hover:bg-black" : "bg-neutral-200 text-neutral-400 border-neutral-300 cursor-not-allowed"
               }`}
             >
-              {uploading ? "Uploading..." : "Analyze session"}
-              <Activity className="w-6 md:w-8 h-6 md:h-8" />
+              <span className="flex items-center gap-2 md:gap-4">
+                {uploading
+                  ? uploadProgress < 100
+                    ? `Uploading... ${uploadProgress}%`
+                    : "Saving to disk..."
+                  : "Analyze session"}
+                <Activity className="w-6 md:w-8 h-6 md:h-8" />
+              </span>
+              {uploading && (
+                <div className="w-full bg-white/30 h-1.5 rounded-none overflow-hidden mt-1">
+                  <div
+                    className="h-full bg-white transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              )}
             </button>
           </div>
         </div>
